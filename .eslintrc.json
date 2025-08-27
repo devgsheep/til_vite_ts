@@ -16,9 +16,9 @@
     "prettier"
   ],
   "rules": {
+    "prettier/prettier": "warn",
     "react/react-in-jsx-scope": "off",
     "no-unused-vars": "off",
-    "prettier/prettier": "warn",
     "@typescript-eslint/no-unused-vars": "off"
   }
 }
