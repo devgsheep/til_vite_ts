@@ -1,0 +1,26 @@
+import React from 'react';
+import { useShop } from '../../contexts/shop/ShopContext';
+
+const Cart = () => {
+  const { balance, cart, removeCartOne, resetCart, clearCartItem, buyAll } = useShop();
+  return (
+    <div>
+      <br />
+      <h2>Cart</h2>
+      <ul>
+        {cart.map(item => (
+          <li key={item.id}>
+            <span>제품명생략</span>
+            <span>구매수:{item.qty}</span>
+            <button onClick={() => removeCartOne(item.id)}>한개 줄이기</button>
+            <button onClick={() => clearCartItem(item.id)}>제품취소</button>
+          </li>
+        ))}
+      </ul>
+      <button onClick={buyAll}>전체 구매하기</button>
+      <button onClick={resetCart}>전체 취소하기</button>
+    </div>
+  );
+};
+
+export default Cart;
