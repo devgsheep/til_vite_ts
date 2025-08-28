@@ -53,21 +53,13 @@ type ShopAction =
   | ShopActionBuyAll
   | ShopActionReset;
 
-// 장바구니 전체 금액계산하기
-function calcCart(nowState: ShopStateType): number {
-  // reduce는 누적시켜 더할때 사용함
-  const total = nowState.cart.reduce((sum, 장바구니제품) => {
-    // id를 이용해서 제품 상세정보 찾기
-    const good = nowState.goods.find(g => g.id === 장바구니제품.id);
-    if (good) {
-      // 제품을 찾았다면
-      return sum + good.price * 장바구니제품.qty;
-    } else {
-      // 제품이 없으면
-      return sum;
-    }
+// 장바구니 전체 금액 계산하기
+// 총액 계산 함수 (state 대신 cart, goods만 받도록)
+function calcTotal(cart: CartType[], goods: GoodType[]): number {
+  return cart.reduce((sum, c) => {
+    const good = goods.find(g => g.id === c.id);
+    return good ? sum + good.price * c.qty : sum;
   }, 0);
-  return total;
 }
 
 function reducer(state: ShopStateType, action: ShopAction) {
@@ -116,7 +108,7 @@ function reducer(state: ShopStateType, action: ShopAction) {
 
     case ShopActionType.BUY_ALL: {
       // 총 금액계산
-      const total = calcCart(state);
+      const total = calcTotal(state.cart, state.goods);
       if (total > state.balance) {
         alert('돈이 부족합니다. 장바구니를 줄이세요');
         return state;
@@ -184,6 +176,17 @@ export function useShop() {
   }
   return ctx;
 }
+
+// 6. 추가 커스텀 훅 : 상품 찾기, 총액
+export function useShopSelectors() {
+  const { goods, cart } = useShop();
+  // 제품 한개 정보 찾기
+  const getGood = (id: number) => goods.find(item => item.id === id);
+  // 총 금액
+  const total = calcTotal(cart, goods);
+  // 리턴
+  return { getGood, total };
+}
 ```
 
 - /src/components/shop 폴더 생성
@@ -194,15 +197,34 @@ import React from 'react';
 import { useShop } from '../../contexts/shop/ShopContext';
 
 const GoodList = () => {
+  // ts 자리
   const { goods, addCart } = useShop();
+
+  const box: React.CSSProperties = {
+    border: '2px solid #eee',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    background: '#fff',
+  };
+  const boxrow: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '8px 0',
+    borderBottom: '1px solid #eee',
+  };
+  // tsx 자리
   return (
-    <div>
-      <h2>GoodList</h2>
-      <ul>
+    <div style={box}>
+      <h2>📋 GoodList</h2>
+      <ul style={{ padding: 0, margin: 0 }}>
         {goods.map(item => (
-          <li key={item.id}>
-            <span>제품명 : {item.name}</span>
-            <span>가격 : {item.price}원</span>
+          <li key={item.id} style={boxrow}>
+            <span>
+              <strong>{item.name} </strong>
+              {item.price.toLocaleString()}원
+            </span>
             <button onClick={() => addCart(item.id)}>담기</button>
           </li>
         ))}
@@ -218,26 +240,67 @@ export default GoodList;
 
 ```tsx
 import React from 'react';
-import { useShop } from '../../contexts/shop/ShopContext';
+import { useShop, useShopSelectors } from '../../contexts/shop/ShopContext';
 
 const Cart = () => {
-  const { balance, cart, removeCartOne, resetCart, clearCartItem, buyAll } = useShop();
+  const { balance, cart, addCart, removeCartOne, resetCart, clearCartItem, buyAll } = useShop();
+  const { getGood, total } = useShopSelectors();
+
+  const box: React.CSSProperties = {
+    border: '2px solid #eee',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    background: '#fff',
+  };
+  const boxrow: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '8px 0',
+    borderBottom: '1px dashed #eee',
+  };
   return (
-    <div>
-      <br />
-      <h2>Cart</h2>
-      <ul>
-        {cart.map(item => (
-          <li key={item.id}>
-            <span>제품명생략</span>
-            <span>구매수:{item.qty}</span>
-            <button onClick={() => removeCartOne(item.id)}>한개 줄이기</button>
-            <button onClick={() => clearCartItem(item.id)}>제품취소</button>
-          </li>
-        ))}
-      </ul>
-      <button onClick={buyAll}>전체 구매하기</button>
-      <button onClick={resetCart}>전체 취소하기</button>
+    <div style={box}>
+      <h2>🛒 Cart</h2>
+      {cart.length === 0 ? (
+        <p>장바구니에 물품이 없습니다.</p>
+      ) : (
+        <ul>
+          {cart.map(item => {
+            // 제품 찾기
+            const good = getGood(item.id);
+
+            // tsx 출력
+            return (
+              <li key={item.id} style={boxrow}>
+                <div>
+                  <strong>{good?.name}</strong> x {item.qty}
+                  <div>
+                    {good?.price.toLocaleString()} x {item.qty} ={' '}
+                    {(good!.price * item.qty).toLocaleString()} 원
+                  </div>
+                </div>
+                <span>구매수:{item.qty}</span>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button onClick={() => addCart(item.id)}>➕ </button>
+                  <button onClick={() => removeCartOne(item.id)}>➖</button>
+                  <button onClick={() => clearCartItem(item.id)}>❌</button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <hr />
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <strong>총액 : </strong>
+        <strong>{total.toLocaleString()}</strong>
+      </div>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button onClick={buyAll}>전체 구매하기</button>
+        <button onClick={resetCart}>전체 취소하기</button>
+      </div>
     </div>
   );
 };
@@ -253,7 +316,22 @@ import { useShop } from '../../contexts/shop/ShopContext';
 
 const Wallet = () => {
   const { balance } = useShop();
-  return <div>Wallet : {balance}</div>;
+  const box: React.CSSProperties = {
+    border: '2px solid #eee',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    background: '#fff',
+  };
+  return (
+    <div style={box}>
+      <h2>💼 내 지갑</h2>
+      <div style={{ fontSize: 30 }}>
+        <strong>{balance.toLocaleString()}원</strong>
+      </div>
+      <p style={{ marginTop: 8, color: '#666' }}>장바구니에 담긴 제품을 구매하면 여기서 빠져요!</p>
+    </div>
+  );
 };
 
 export default Wallet;
@@ -269,14 +347,32 @@ import Wallet from './components/shop/Wallet';
 import { ShopProvider } from './contexts/shop/ShopContext';
 
 function App() {
+  // ts 자리
+  const page: React.CSSProperties = {
+    maxWidth: 960,
+    margin: '0 auto',
+    padding: 24,
+    background: '#f5f5f5',
+  };
+  const grid: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: '2fr 320px',
+    gap: 20,
+    alignItems: 'start',
+  };
+  // tsx 자리
   return (
-    <div>
-      <h1>나의 가게</h1>
+    <div style={page}>
+      <h1>🏡 나의 가게</h1>
       <ShopProvider>
-        <div>
-          <GoodList />
-          <Cart />
-          <Wallet />
+        <div style={grid}>
+          <div>
+            <GoodList />
+            <Cart />
+          </div>
+          <div>
+            <Wallet />
+          </div>
         </div>
       </ShopProvider>
     </div>
@@ -284,4 +380,456 @@ function App() {
 }
 
 export default App;
+```
+
+## 2. 실전 파일 분리하기
+
+### 2.1. 폴더 및 파일 구조
+
+- 기능별로 분리한다면 contexts 말고 `features` 폴더로
+- `/src/features` 폴더 생성
+- `/src/features/shop/types.ts 파일` 생성
+
+```ts
+// 장바구니 아이템 타입
+export type CartType = { id: number; qty: number };
+// 제품 아이템 타입
+export type GoodType = {
+  id: number;
+  name: string;
+  price: number;
+};
+// 상점 상태 타입
+export type ShopStateType = {
+  balance: number;
+  cart: CartType[];
+  goods: GoodType[];
+};
+// Action 타입
+export enum ShopActionType {
+  ADD_CART = 'ADD_CART',
+  REMOVE_CART_ONE = 'REMOVE_CART_ONE',
+  CLEAR_CART_ITEM = 'CLEAR_CART_ITEM',
+  BUY_ALL = 'BUY_ALL',
+  RESET = 'RESET',
+}
+export type ShopActionAddCart = { type: ShopActionType.ADD_CART; payload: { id: number } };
+export type ShopActionRemoveCart = {
+  type: ShopActionType.REMOVE_CART_ONE;
+  payload: { id: number };
+};
+export type ShopActionClearCart = { type: ShopActionType.CLEAR_CART_ITEM; payload: { id: number } };
+export type ShopActionBuyAll = { type: ShopActionType.BUY_ALL };
+export type ShopActionReset = { type: ShopActionType.RESET };
+export type ShopAction =
+  | ShopActionAddCart
+  | ShopActionRemoveCart
+  | ShopActionClearCart
+  | ShopActionBuyAll
+  | ShopActionReset;
+
+// Context의 Value 타입
+export type ShopValueType = {
+  cart: CartType[];
+  goods: GoodType[];
+  balance: number;
+  addCart: (id: number) => void;
+  removeCartOne: (id: number) => void;
+  clearCartItem: (id: number) => void;
+  buyAll: () => void;
+  resetCart: () => void;
+};
+```
+
+- `/src/features/shop/state.ts 파일` 생성
+
+```ts
+import type { ShopStateType } from './types';
+
+export const initialState: ShopStateType = {
+  balance: 100000,
+  cart: [],
+  goods: [
+    { id: 1, name: '🍎 사과', price: 1000 },
+    { id: 2, name: '🍓 딸기', price: 30000 },
+    { id: 3, name: '🍌 바나나', price: 500 },
+    { id: 4, name: '🍫 초콜렛', price: 8000 },
+  ],
+};
+```
+
+- `/src/features/shop/utils.ts 파일` 생성
+
+```ts
+import type { CartType, GoodType } from './types';
+// 장바구니 전체 금액 계산하기
+// 총액 계산 함수 (state 대신 cart, goods만 받도록)
+export function calcTotal(cart: CartType[], goods: GoodType[]): number {
+  return cart.reduce((sum, c) => {
+    const good = goods.find(g => g.id === c.id);
+    return good ? sum + good.price * c.qty : sum;
+  }, 0);
+}
+```
+
+- `/src/features/shop/reducer.ts 파일` 생성
+
+```ts
+import { initialState } from './state';
+import type { CartType, ShopAction, ShopStateType } from './types';
+import { ShopActionType } from './types';
+import { calcTotal } from './utils';
+
+export function reducer(state: ShopStateType, action: ShopAction) {
+  switch (action.type) {
+    case ShopActionType.ADD_CART: {
+      const { id } = action.payload; // 제품의 ID
+      // id 제품이 배열에 있는가? qty가 있는가?
+      const existGood = state.cart.find(item => item.id === id);
+      let arr: CartType[] = [];
+      if (existGood) {
+        // qty 증가
+        arr = state.cart.map(item => (item.id === id ? { ...item, qty: item.qty + 1 } : item));
+      } else {
+        // state.cart 에 새 제품 추가, qty는 1개
+        arr = [...state.cart, { id, qty: 1 }];
+      }
+      return { ...state, cart: arr };
+    }
+
+    case ShopActionType.REMOVE_CART_ONE: {
+      const { id } = action.payload; // 1개 빼줄 제품의 ID
+      // id 제품이 배열에 있는가? qty가 있는가?
+      const existGood = state.cart.find(item => item.id === id);
+      if (!existGood) {
+        // 제품이 없다면...
+        return state;
+      }
+      let arr: CartType[] = [];
+      if (existGood.qty > 1) {
+        // 제품이 최소 2개 이상이면
+        arr = state.cart.map(item => (item.id === id ? { ...item, qty: item.qty - 1 } : item));
+      } else {
+        // 제품이 1개 담겼어요.
+        arr = state.cart.filter(item => item.id !== id);
+      }
+
+      return { ...state, cart: arr };
+    }
+
+    case ShopActionType.CLEAR_CART_ITEM: {
+      // 담겨진 제품 중에 장바구니에서 제거하기
+      const { id } = action.payload;
+      const arr = state.cart.filter(item => item.id !== id);
+      return { ...state, cart: arr };
+    }
+
+    case ShopActionType.BUY_ALL: {
+      // 총 금액계산
+      const total = calcTotal(state.cart, state.goods);
+      if (total > state.balance) {
+        alert('돈이 부족합니다. 장바구니를 줄이세요');
+        return state;
+      }
+      return { ...state, balance: state.balance - total, cart: [] };
+    }
+
+    case ShopActionType.RESET: {
+      return { ...state, cart: [] };
+    }
+    default:
+      return state;
+  }
+}
+```
+
+- `/src/features/shop/ShopContext.tsx 파일` 생성
+
+```tsx
+import React, { createContext, useReducer, type PropsWithChildren } from 'react';
+import { ShopActionType, type ShopValueType } from './types';
+import { reducer } from './reducer';
+import { initialState } from './state';
+
+// 3. 컨택스트 생성
+export const ShopContext = createContext<ShopValueType | null>(null);
+// 4. 프로바이더 생성
+export const ShopProvider: React.FC<PropsWithChildren> = ({ children }) => {
+  const [state, dispatch] = useReducer(reducer, initialState);
+
+  // dispatch용 함수 표현식
+  const addCart = (id: number): void => {
+    dispatch({ type: ShopActionType.ADD_CART, payload: { id } });
+  };
+  const removeCartOne = (id: number): void => {
+    dispatch({ type: ShopActionType.REMOVE_CART_ONE, payload: { id } });
+  };
+  const clearCartItem = (id: number): void => {
+    dispatch({ type: ShopActionType.CLEAR_CART_ITEM, payload: { id } });
+  };
+  const buyAll = (): void => {
+    dispatch({ type: ShopActionType.BUY_ALL });
+  };
+  const resetCart = (): void => {
+    dispatch({ type: ShopActionType.RESET });
+  };
+
+  const value: ShopValueType = {
+    cart: state.cart,
+    goods: state.goods,
+    balance: state.balance,
+    addCart,
+    removeCartOne,
+    clearCartItem,
+    buyAll,
+    resetCart,
+  };
+  return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;
+};
+```
+
+- `/src/features/shop/hooks` 폴더 생성
+- `/src/features/shop/hooks/useShop.ts 파일` 생성
+
+```ts
+import { useContext } from 'react';
+import { ShopContext } from '../ShopContext';
+
+export function useShop() {
+  const ctx = useContext(ShopContext);
+  if (!ctx) {
+    throw new Error('에러');
+  }
+  return ctx;
+}
+```
+
+- `/src/features/shop/hooks/useShopSelectors.ts 파일` 생성
+
+```ts
+import { calcTotal } from '../utils';
+import { useShop } from './useShop';
+
+// 6. 추가 커스텀 훅 : 상품 찾기, 총액
+export function useShopSelectors() {
+  const { goods, cart } = useShop();
+  // 제품 한개 정보 찾기
+  const getGood = (id: number) => goods.find(item => item.id === id);
+  // 총 금액
+  const total = calcTotal(cart, goods);
+  // 리턴
+  return { getGood, total };
+}
+```
+
+### 2.2. `배럴(Barrel) 파일` 활용하기
+
+- 여러 모듈에서 내보낸 것들을 모아서 하나의 파일에서 다시 내보내는 패턴
+- 주로 index.js나 index.ts로 파일명을 정한다.
+- 즉 `대표 파일`이라고 한다.
+- `/src/features/shop/index.ts 파일` 생성
+
+```ts
+export * from './types';
+// 아래의 경우는 충돌 발생 소지 있음.
+export { initialState } from './state';
+export { calcTotal } from './utils';
+// 아래의 경우는 충돌 발생 소지 있음.
+export { reducer } from './reducer';
+export { ShopContext, ShopProvider } from './ShopContext';
+export { useShop } from './hooks/useShop';
+export { useShopSelectors } from './hooks/useShopSelectors';
+```
+
+- App.tsx
+
+```tsx
+import React from 'react';
+import GoodList from './components/shop/GoodList';
+import Cart from './components/shop/Cart';
+import Wallet from './components/shop/Wallet';
+import { ShopProvider } from './features/shop';
+
+function App() {
+  // ts 자리
+  const page: React.CSSProperties = {
+    maxWidth: 960,
+    margin: '0 auto',
+    padding: 24,
+    background: '#f5f5f5',
+  };
+  const grid: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: '320px 1fr',
+    gap: 20,
+    alignItems: 'start',
+  };
+  // tsx 자리
+  return (
+    <div style={page}>
+      <h1>🏡 나의 가게</h1>
+      <br />
+      <ShopProvider>
+        <div style={grid}>
+          <div>
+            <GoodList />
+          </div>
+          <div>
+            <Cart />
+            <Wallet />
+          </div>
+        </div>
+      </ShopProvider>
+    </div>
+  );
+}
+
+export default App;
+```
+
+- GoodList.tsx
+
+```tsx
+import React from 'react';
+import { useShop } from '../../features/shop';
+
+const GoodList = () => {
+  // ts 자리
+  const { goods, addCart } = useShop();
+
+  const box: React.CSSProperties = {
+    border: '2px solid #eee',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    background: '#fff',
+  };
+  const boxrow: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '8px 0',
+    borderBottom: '1px solid #eee',
+  };
+  // tsx 자리
+  return (
+    <div style={box}>
+      <h2>📋 GoodList</h2>
+      <ul style={{ padding: 0, margin: 0 }}>
+        {goods.map(item => (
+          <li key={item.id} style={boxrow}>
+            <span>
+              <strong>{item.name} </strong>
+              {item.price.toLocaleString()}원
+            </span>
+            <button onClick={() => addCart(item.id)}>담기</button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
+export default GoodList;
+```
+
+- Cart.tsx
+
+```tsx
+import React from 'react';
+import { useShopSelectors } from '../../features/shop';
+import { useShop } from '../../contexts/shop/ShopContext';
+
+const Cart = () => {
+  const { balance, cart, addCart, removeCartOne, resetCart, clearCartItem, buyAll } = useShop();
+  const { getGood, total } = useShopSelectors();
+
+  const box: React.CSSProperties = {
+    border: '2px solid #eee',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    background: '#fff',
+  };
+  const boxrow: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '8px 0',
+    borderBottom: '1px dashed #eee',
+  };
+  return (
+    <div style={box}>
+      <h2>🛒 Cart</h2>
+      {cart.length === 0 ? (
+        <p>장바구니에 물품이 없습니다.</p>
+      ) : (
+        <ul>
+          {cart.map(item => {
+            // 제품 찾기
+            const good = getGood(item.id);
+            // tsx 출력
+            return (
+              <li key={item.id} style={boxrow}>
+                <div style={{ minWidth: 170 }}>
+                  <strong>{good?.name}</strong> x {item.qty}
+                  <div>
+                    {good?.price.toLocaleString()} x {item.qty} ={' '}
+                    {(good!.price * item.qty).toLocaleString()} 원
+                  </div>
+                </div>
+                <span style={{ minWidth: 80 }}>구매수:{item.qty}</span>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button onClick={() => addCart(item.id)}>➕ </button>
+                  <button onClick={() => removeCartOne(item.id)}>➖</button>
+                  <button onClick={() => clearCartItem(item.id)}>❌</button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <hr />
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <strong>총액 : </strong>
+        <strong>{total.toLocaleString()}</strong>
+      </div>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button onClick={buyAll}>전체 구매하기</button>
+        <button onClick={resetCart}>전체 취소하기</button>
+      </div>
+    </div>
+  );
+};
+
+export default Cart;
+```
+
+- Wallet.tsx
+
+```tsx
+import React from 'react';
+import { useShop } from '../../features/shop';
+
+const Wallet = () => {
+  const { balance } = useShop();
+  const box: React.CSSProperties = {
+    border: '2px solid #eee',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    background: '#fff',
+  };
+  return (
+    <div style={box}>
+      <h2>💼 내 지갑</h2>
+      <div style={{ fontSize: 30 }}>
+        <strong>{balance.toLocaleString()}원</strong>
+      </div>
+      <p style={{ marginTop: 8, color: '#666' }}>장바구니에 담긴 제품을 구매하면 여기서 빠져요!</p>
+    </div>
+  );
+};
+
+export default Wallet;
 ```
