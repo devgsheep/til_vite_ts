@@ -1,9 +1,8 @@
 import React from 'react';
-import { useShopSelectors } from '../../features/shop';
-import { useShop } from '../../contexts/shop/ShopContext';
+import { useShop, useShopSelectors } from '../../features/shop';
 
 const Cart = () => {
-  const { balance, cart, addCart, removeCartOne, resetCart, clearCartItem, buyAll } = useShop();
+  const { cart, addCart, removeCartOne, resetCart, clearCartItem, buyAll } = useShop();
   const { getGood, total } = useShopSelectors();
 
   const box: React.CSSProperties = {
@@ -37,7 +36,7 @@ const Cart = () => {
                   <strong>{good?.name}</strong> x {item.qty}
                   <div>
                     {good?.price.toLocaleString()} x {item.qty} ={' '}
-                    {(good!.price * item.qty).toLocaleString()} 원
+                    {(good!.price * item.qty).toLocaleString()}
                   </div>
                 </div>
                 <span style={{ minWidth: 80 }}>구매수:{item.qty}</span>
