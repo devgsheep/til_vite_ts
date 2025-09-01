@@ -6,6 +6,7 @@ import GoodsPage from './pages/GoodsPage';
 import HomePage from './pages/HomePage';
 import NotFound from './pages/NotFound';
 import WalletPage from './pages/WalletPage';
+import Calendar from './pages/Calendar';
 
 function App() {
   // ts 자리
@@ -56,6 +57,7 @@ function App() {
           </NavLink>
         </nav>
         <h1>🏡 나의 가게</h1>
+        <Calendar />
         <br />
         <ShopProvider>
           <div>
