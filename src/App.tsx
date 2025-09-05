@@ -7,9 +7,13 @@ import TodosPage from './pages/TodosPage';
 import AuthCallback from './pages/AuthCallback';
 import Protected from './components/Protected';
 import ProfilePage from './pages/ProfilePage';
+import AdminPage from './pages/AdminPage';
 
 const TopBar = () => {
   const { signOut, user } = useAuth();
+  // 관리자인 경우 메뉴 추가로 출력하기
+  // isAdmin은 true / false
+  const isAdmin = user?.email === 'dev.gsheep@gmail.com';
   return (
     <nav style={{ display: 'flex', gap: 20, justifyContent: 'flex-end', padding: 40 }}>
       <Link to="/">홈</Link>
@@ -18,6 +22,8 @@ const TopBar = () => {
       {!user && <Link to="/signin">로그인</Link>}
       {user && <Link to="/profile">프로필</Link>}
       {user && <button onClick={signOut}>로그아웃</button>}
+
+      {isAdmin && <Link to="/admin">관리자</Link>}
     </nav>
   );
 };
@@ -49,7 +55,15 @@ function App() {
                   <ProfilePage />
                 </Protected>
               }
-            ></Route>
+            />
+            <Route
+              path="/admin"
+              element={
+                <Protected>
+                  <AdminPage />
+                </Protected>
+              }
+            />
           </Routes>
         </Router>
       </div>
