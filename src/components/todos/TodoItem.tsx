@@ -16,7 +16,6 @@ const TodoItem = ({ todo }: TodoItemProps): JSX.Element => {
   // 수정중인지
   const [isEdit, setIsEdit] = useState<boolean>(false);
   const [editTitle, setEditTitle] = useState<string>(todo.title);
-
   const handleChangeTitle = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setEditTitle(e.target.value);
   };
