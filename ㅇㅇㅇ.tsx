@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { Todo, TodoInsert, TodoUpdate } from '../types/TodoType';
+import type { Todo, TodoInsert, TodoUpdate } from '../types/TodoTypes';
 
 // Todo 목록 조회
 export const getTodos = async (): Promise<Todo[]> => {
@@ -7,16 +7,17 @@ export const getTodos = async (): Promise<Todo[]> => {
     .from('todos')
     .select('*')
     .order('created_at', { ascending: false });
-  // 실행은 되었지만, 결과가 오류이다.
   if (error) {
+    // 실행은 되었지만 결과가 오류이다.
     throw new Error(`getTodos 오류 : ${error.message}`);
   }
   return data || [];
 };
+
 // Todo 생성
-// 로그인을 하고 나면 실제로 user_id가 이미 파악이 됨
-// todoInsert에서 user_id : 값을 생략하는 타입을 생성
-// 타입스크립트에서 Omit을 이용하면, 특정 키를 제거할 수 있음.
+// 로그인을 하고 나면 실제로 user_id 가 이미 파악이 됨
+// TodoInsert 에서 user_id : 값 을 생략하는 타입을 생성
+// 타입스크립트에서 Omit 을 이용하면, 특정 키를 제거할 수 있다.
 export const createTodo = async (newTodo: Omit<TodoInsert, 'user_id'>): Promise<Todo | null> => {
   try {
     // 현재 로그인 한 사용자 정보 가져오기
@@ -30,9 +31,10 @@ export const createTodo = async (newTodo: Omit<TodoInsert, 'user_id'>): Promise<
     const { data, error } = await supabase
       .from('todos')
       .insert([{ ...newTodo, completed: false, user_id: user.id }])
-      .select('*')
+      .select()
       .single();
     if (error) {
+      // 실행은 되었지만 결과가 오류이다.
       throw new Error(`createTodos 오류 : ${error.message}`);
     }
     return data;
@@ -42,9 +44,9 @@ export const createTodo = async (newTodo: Omit<TodoInsert, 'user_id'>): Promise<
   }
 };
 // Todo 수정
-// 로그인을 하고 나면 실제로 user_id가 이미 파악이 됨
-// todoInsert에서 user_id : 값을 생략하는 타입을 생성
-// 타입스크립트에서 Omit을 이용하면, 특정 키를 제거할 수 있음.
+// 로그인을 하고 나면 실제로 user_id 가 이미 파악이 됨
+// TodoUpdate 에서 user_id : 값 을 생략하는 타입을 생성
+// 타입스크립트에서 Omit 을 이용하면, 특정 키를 제거할 수 있다.
 export const updateTodo = async (
   id: number,
   editTitle: Omit<TodoUpdate, 'user_id'>,
@@ -57,7 +59,8 @@ export const updateTodo = async (
       .select()
       .single();
     if (error) {
-      throw new Error(`updateTodo 오류 : ${error.message}`);
+      // 실행은 되었지만 결과가 오류이다.
+      throw new Error(`updateTodos 오류 : ${error.message}`);
     }
     return data;
   } catch (error) {
@@ -70,7 +73,8 @@ export const deleteTodo = async (id: number): Promise<void> => {
   try {
     const { error } = await supabase.from('todos').delete().eq('id', id);
     if (error) {
-      throw new Error(`deleteTodo 오류 : ${error.message}`);
+      // 실행은 되었지만 결과가 오류이다.
+      throw new Error(`deleteTodos 오류 : ${error.message}`);
     }
   } catch (error) {
     console.log(error);
@@ -90,23 +94,22 @@ export const getTodosPaginated = async (
   limit: number = 10,
 ): Promise<{ todos: Todo[]; totalCount: number; totalPages: number; currentPage: number }> => {
   // 시작
-  // page = 2, limit 10
-  // 2-1 * 10 => 10
+  // page=2, limit 10
+  // (2-1) * 10 => 10
   const from = (page - 1) * limit;
   // 제한
   // 10 + 10 - 1 => 19
-  const to = from + limit - 1;
+  const to = from + 1 + limit - 1;
 
-  // 전체 데이터 개수 (row의 개수)
+  // 전체 데이터 개수 (row 의 개수)
   const { count } = await supabase.from('todos').select('*', { count: 'exact', head: true });
 
   // from 부터 to 까지의 상세 데이터
   const { data } = await supabase
     .from('todos')
     .select('*')
-    .order('created_at', { ascending: false })
+    .order(`created_at`, { ascending: false })
     .range(from, to);
-
   // 편하게 활용
   const totalCount = count || 0;
   // 몇페이지 인지 계산 (소숫점은 올림)
