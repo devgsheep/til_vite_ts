@@ -168,7 +168,7 @@ export const TodoProvider: React.FC<TodoProviderProps> = ({
   // 페이지가 바뀌면 다시 실행하도록 해야 한다.
   useEffect(() => {
     loadTodos(currentPage, limit);
-  }, [currentPage]);
+  }, [currentPage, limit]);
 
   // value 전달할 값
   const value: TodoContextValue = {
