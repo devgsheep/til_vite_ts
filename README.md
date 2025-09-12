@@ -903,62 +903,13 @@ export default TodosInfinitePage;
 
 ## 9. 무한 스크롤 구현
 
-- `IntersectionObserver`를 이용함
-- `웹브라우저에 내장된 API`중 하나.
-- 요소 즉, 대상이 되는 태그(element)가
-  - 뷰포트(화면에 보이는 영역),
-  - 특정 스크롤 영역 과 교차(intersect) 하는지 감시하는 도구.
-  - intersect는 DOM 요소가 화면에 보이거나, 사라지거나 등을 말함.
-- `스크롤 이벤트를 사용하지 않고도 자동으로 화면에 보이는 순간을 체크`할 수 있음.
+### 9.1. npm 설치
 
-### 9.1. 기본 문법
+- https://www.npmjs.com/package/react-infinite-scroll-component
+- https://blog.itcode.dev/posts/2024/07/22/react-component-infinite-scroll
 
-```js
-const observer = new IntersectionObserver((entries, observer) => {
-  // entries: 관찰 중인 모든 요소의 교차 상태 목록
-  // observer: 지금 만든 옵저버 자기 자신
-});
-
-// 특정 DOM 요소 관찰 시작
-observer.observe(domElement);
-
-// 관찰 해제
-observer.unobserve(domElement);
-
-// 모든 관찰 중지
-observer.disconnect();
-```
-
-### 9.2. 예제
-
-- `<div id="target"></div>`
-
-```js
-const target = document.getElementById('target');
-
-const observer = new IntersectionObserver(entries => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      console.log('화면에 보임!', entry);
-    } else {
-      console.log('화면에서 나감!', entry);
-    }
-  });
-});
-
-observer.observe(target);
-```
-
-### 9.3. 옵션
-
-```js
-const options = {
-  root: null, // 관찰 기준 영역 (null이면 브라우저 뷰포트)
-  rootMargin: '0px', // root 바깥쪽 여백 (미리 감지하고 싶을 때 '200px' 같은 값)
-  threshold: 0.5, // 요소가 50% 보였을 때만 트리거
-};
-
-const observer = new IntersectionObserver(callback, options);
+```bash
+npm i react-infinite-scroll-component
 ```
 
 ## 10. 라우터 추가
