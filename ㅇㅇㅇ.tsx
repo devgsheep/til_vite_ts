@@ -1,123 +1,112 @@
-import { supabase } from '../lib/supabase';
-import type { Todo, TodoInsert, TodoUpdate } from '../types/TodoTypes';
+// 5. Provider 생성
+// interface InfiniteScrollProviderProps {
+//   children?: React.ReactNode;
+//   itemsPerPage: number;
+// }
+interface InfiniteScrollProviderProps extends PropsWithChildren {
+  itemsPerPage?: number;
+}
 
-// Todo 목록 조회
-export const getTodos = async (): Promise<Todo[]> => {
-  const { data, error } = await supabase
-    .from('todos')
-    .select('*')
-    .order('created_at', { ascending: false });
-  if (error) {
-    // 실행은 되었지만 결과가 오류이다.
-    throw new Error(`getTodos 오류 : ${error.message}`);
-  }
-  return data || [];
-};
+export const InfiniteScrollProvider: React.FC<InfiniteScrollProviderProps> = ({
+  children,
+  itemsPerPage = 5,
+}) => {
+  // ts 자리
+  // useReducer 를 활용
+  const [state, dispatch] = useReducer(reducer, initialState);
 
-// Todo 생성
-// 로그인을 하고 나면 실제로 user_id 가 이미 파악이 됨
-// TodoInsert 에서 user_id : 값 을 생략하는 타입을 생성
-// 타입스크립트에서 Omit 을 이용하면, 특정 키를 제거할 수 있다.
-export const createTodo = async (newTodo: Omit<TodoInsert, 'user_id'>): Promise<Todo | null> => {
-  try {
-    // 현재 로그인 한 사용자 정보 가져오기
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      throw new Error('로그인이 필요합니다.');
+  // 초기 데이터 로드
+  const loadingIntialTodos = async (): Promise<void> => {
+    try {
+      // 초기로딩 활성화
+      dispatch({ type: InfiniteScrollActionType.SET_LOADING, payload: true });
+      const result = await getTodosInfinite(0, itemsPerPage);
+
+      console.log(
+        '초기로드 된 데이터 ',
+        result.todos.map(item => ({
+          id: item.id,
+          title: item.title,
+          create_at: item.created_at,
+          user_id: item.user_id,
+        })),
+      );
+
+      dispatch({
+        type: InfiniteScrollActionType.SET_TODOS,
+        payload: { todos: result.todos, hasMore: result.hasMore, totalCount: result.totalCount },
+      });
+    } catch (error) {
+      console.log(`초기 데이터 로드 실패 : ${error}`);
+      dispatch({ type: InfiniteScrollActionType.SET_LOADING, payload: false });
     }
-
-    const { data, error } = await supabase
-      .from('todos')
-      .insert([{ ...newTodo, completed: false, user_id: user.id }])
-      .select()
-      .single();
-    if (error) {
-      // 실행은 되었지만 결과가 오류이다.
-      throw new Error(`createTodos 오류 : ${error.message}`);
-    }
-    return data;
-  } catch (error) {
-    console.log(error);
-    return null;
-  }
-};
-// Todo 수정
-// 로그인을 하고 나면 실제로 user_id 가 이미 파악이 됨
-// TodoUpdate 에서 user_id : 값 을 생략하는 타입을 생성
-// 타입스크립트에서 Omit 을 이용하면, 특정 키를 제거할 수 있다.
-export const updateTodo = async (
-  id: number,
-  editTitle: Omit<TodoUpdate, 'user_id'>,
-): Promise<Todo | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('todos')
-      .update({ ...editTitle, updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .select()
-      .single();
-    if (error) {
-      // 실행은 되었지만 결과가 오류이다.
-      throw new Error(`updateTodos 오류 : ${error.message}`);
-    }
-    return data;
-  } catch (error) {
-    console.log(error);
-    return null;
-  }
-};
-// Todo 삭제
-export const deleteTodo = async (id: number): Promise<void> => {
-  try {
-    const { error } = await supabase.from('todos').delete().eq('id', id);
-    if (error) {
-      // 실행은 되었지만 결과가 오류이다.
-      throw new Error(`deleteTodos 오류 : ${error.message}`);
-    }
-  } catch (error) {
-    console.log(error);
-  }
-};
-// Completed Toggle
-export const toggleTodo = async (id: number, completed: boolean): Promise<Todo | null> => {
-  return updateTodo(id, { completed });
-};
-
-// 페이지 단위로 조각내서 목록 출력하기
-// getTodosPaginated(1, 10개)
-// getTodosPaginated(2, 10개)
-// getTodosPaginated(페이지번호, 10개)
-export const getTodosPaginated = async (
-  page: number = 1,
-  limit: number = 10,
-): Promise<{ todos: Todo[]; totalCount: number; totalPages: number; currentPage: number }> => {
-  // 시작
-  // page=2, limit 10
-  // (2-1) * 10 => 10
-  const from = (page - 1) * limit;
-  // 제한
-  // 10 + 10 - 1 => 19
-  const to = from + 1 + limit - 1;
-
-  // 전체 데이터 개수 (row 의 개수)
-  const { count } = await supabase.from('todos').select('*', { count: 'exact', head: true });
-
-  // from 부터 to 까지의 상세 데이터
-  const { data } = await supabase
-    .from('todos')
-    .select('*')
-    .order(`created_at`, { ascending: false })
-    .range(from, to);
-  // 편하게 활용
-  const totalCount = count || 0;
-  // 몇페이지 인지 계산 (소숫점은 올림)
-  const totalPages = Math.ceil(totalCount / limit);
-  return {
-    todos: data || [],
-    totalCount,
-    totalPages,
-    currentPage: page,
   };
+
+  // 데이터 더 보기 기능
+  const loadMoreTodos = async (): Promise<void> => {
+    try {
+      dispatch({ type: InfiniteScrollActionType.SET_LOADING_MORE, payload: true });
+      const result = await getTodosInfinite(state.todos.length, itemsPerPage);
+      console.log(
+        '추가로 로드된 데이터 ',
+        result.todos.map(item => ({
+          id: item.id,
+          title: item.title,
+          create_at: item.created_at,
+          user_id: item.user_id,
+        })),
+      );
+
+      dispatch({
+        type: InfiniteScrollActionType.APPEND_TODOS,
+        payload: { todos: result.todos, hasMore: result.hasMore },
+      });
+    } catch (error) {
+      console.log(`추가 데이터 로드 실패 : ${error}`);
+      dispatch({ type: InfiniteScrollActionType.SET_LOADING_MORE, payload: false });
+    }
+  };
+
+  // Todo 추가
+  const addTodo = (todo: Todo): void => {
+    dispatch({ type: InfiniteScrollActionType.ADD_TODO, payload: { todo } });
+  };
+
+  // Todo 토글
+  const toggleTodo = (id: number): void => {
+    dispatch({ type: InfiniteScrollActionType.TOGGLE_TODO, payload: { id } });
+  };
+
+  // Todo 삭제
+  const deleteTodo = (id: number): void => {
+    dispatch({ type: InfiniteScrollActionType.DELETE_TODO, payload: { id } });
+  };
+
+  // Todo 수정
+  const editTodo = (id: number, title: string): void => {
+    dispatch({ type: InfiniteScrollActionType.EDIT_TODO, payload: { id, title } });
+  };
+
+  // Context 상태 초기화
+  const reset = (): void => {
+    dispatch({ type: InfiniteScrollActionType.RESET });
+  };
+
+  const value: InfiniteScrollContextValue = {
+    todos: state.todos,
+    hasMore: state.hasMore,
+    totalCount: state.totalCount,
+    loading: state.loading,
+    loadingMore: state.loadingMore,
+    loadingIntialTodos,
+    loadMoreTodos,
+    addTodo,
+    toggleTodo,
+    deleteTodo,
+    editTodo,
+    reset,
+  };
+
+  // tsx 자리
+  return <InfiniteScrollContext.Provider value={value}>{children}</InfiniteScrollContext.Provider>;
 };
