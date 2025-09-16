@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { act, useState } from 'react';
 import { useTodos } from '../../contexts/TodoContext';
 import type { Todo } from '../../types/TodoType';
 import {
@@ -17,12 +17,34 @@ const TodoItem = ({ todo, index }: TodoItemProps): JSX.Element => {
   // 순서번호 매기기
   const globalIndex = totalCount - ((currentPage - 1) * itemsPerPage + index);
 
+  // 작성 날짜 포맷팅
+  const formatDate = (dateString: string | null): string => {
+    if (!dateString) return '날짜 없음';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   // 수정중인지
   const [isEdit, setIsEdit] = useState<boolean>(false);
   const [editTitle, setEditTitle] = useState<string>(todo.title);
+
+  // 개별 액션 로딩 상태 (편집 중인지, 토글 중인지, 삭제 중인지)
+  const [actionLoading, setActionLoading] = useState<{
+    edit: boolean;
+    toggle: boolean;
+    delete: boolean;
+  }>({ edit: false, toggle: false, delete: false });
+
   const handleChangeTitle = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setEditTitle(e.target.value);
   };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Enter') {
       // 타이틀 수정
@@ -41,6 +63,8 @@ const TodoItem = ({ todo, index }: TodoItemProps): JSX.Element => {
     }
 
     try {
+      // 수정 진행 중
+      setActionLoading({ ...actionLoading, edit: true });
       // DB의 내용 업데이트
       const result = await updateTodoService(todo.id, { title: editTitle });
 
@@ -51,6 +75,8 @@ const TodoItem = ({ todo, index }: TodoItemProps): JSX.Element => {
       }
     } catch (error) {
       console.log('데이터 업데이트에 실패하였습니다.');
+    } finally {
+      setActionLoading({ ...actionLoading, edit: false });
     }
   };
 
@@ -62,6 +88,8 @@ const TodoItem = ({ todo, index }: TodoItemProps): JSX.Element => {
   // 비동기 통신으로 toggle 업데이트
   const handleToggle = async (): Promise<void> => {
     try {
+      // toggle이 진행됨.
+      setActionLoading({ ...actionLoading, toggle: true });
       // db의 completed가 업데이트 성공시 Todo 타입 리턴
       const result = await toggleTodoService(todo.id, !todo.completed);
       if (result) {
@@ -70,42 +98,96 @@ const TodoItem = ({ todo, index }: TodoItemProps): JSX.Element => {
       }
     } catch (error) {
       console.log('데이터베이스 Toggle이 실패하였습니다.', error);
+    } finally {
+      // toggle이 마무리됨.
+      setActionLoading({ ...actionLoading, toggle: false });
     }
   };
 
   // db의 데이터 delete
   const handleDelete = async (): Promise<void> => {
     try {
+      // delete가 진행됨.
+      setActionLoading({ ...actionLoading, delete: true });
       // db 삭제
       await deleteTodoService(todo.id);
       // state 삭제
       deleteTodo(todo.id);
     } catch (error) {
       console.log('DB 삭제에 실패하였습니다.', error);
+    } finally {
+      // delete가 마무리됨.
+      setActionLoading({ ...actionLoading, delete: false });
     }
   };
 
   return (
-    <li>
+    <li className={`todo-item ${todo.completed ? 'completed' : ''} `}>
       {/* 출력 번호 */}
-      <span>{globalIndex}</span>
+      <span className="todo-number">{globalIndex}</span>
       {isEdit ? (
         <>
-          <input
-            type="text"
-            value={editTitle}
-            onChange={e => handleChangeTitle(e)}
-            onKeyDown={e => handleKeyDown(e)}
-          />
-          <button onClick={handleEditSave}>저장</button>
-          <button onClick={handleEditCancel}>취소</button>
+          <div className="todo-content">
+            <input
+              type="text"
+              value={editTitle}
+              onChange={e => handleChangeTitle(e)}
+              onKeyDown={e => handleKeyDown(e)}
+              className="form-input"
+              style={{ fontSize: '14px', padding: 'var(--space-2)', width: '100%' }}
+            />
+            <span className="todo-date">작성일: {formatDate(todo.created_at)}</span>
+          </div>
+          <div className="todo-actions">
+            <button
+              onClick={handleEditSave}
+              className="btn btn-success btn-sm"
+              disabled={actionLoading.edit}
+            >
+              {actionLoading.edit ? '⏳ 저장 중...' : '✅ 저장'}
+            </button>
+            <button
+              onClick={handleEditCancel}
+              className="btn btn-secondary btn-sm"
+              disabled={actionLoading.edit}
+            >
+              ❌ 취소
+            </button>
+          </div>
         </>
       ) : (
         <>
-          <input type="checkbox" checked={todo.completed} onChange={handleToggle} />
-          <span>{todo.title}</span>
-          <button onClick={() => setIsEdit(true)}>수정</button>
-          <button onClick={handleDelete}>삭제</button>
+          <input
+            type="checkbox"
+            checked={todo.completed}
+            onChange={handleToggle}
+            disabled={actionLoading.toggle}
+            style={{
+              cursor: actionLoading.toggle ? 'not-allowed' : 'pointer',
+              opacity: actionLoading.toggle ? 0.6 : 1,
+            }}
+          />
+
+          <div className="todo-content">
+            <span className={`todo-title ${todo.completed ? 'completed' : ''}`}>{todo.title}</span>
+            <span className="todo-date">작성일: {formatDate(todo.created_at)}</span>
+          </div>
+          <div className="todo-actions">
+            <button
+              onClick={() => setIsEdit(true)}
+              className="btn btn-primary btn-sm"
+              disabled={actionLoading.toggle || actionLoading.delete}
+            >
+              ✏️ 수정
+            </button>
+            <button
+              onClick={handleDelete}
+              className="btn btn-danger btn-sm"
+              disabled={actionLoading.toggle || actionLoading.delete}
+            >
+              {actionLoading.delete ? '⏳ 삭제 중...' : '🗑️ 삭제'}
+            </button>
+          </div>
         </>
       )}
     </li>

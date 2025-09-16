@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import Pagination from '../components/todos/Pagination';
+import Pagination from '../components/Pagination';
 import TodoList from '../components/todos/TodoList';
 import TodoWrite from '../components/todos/TodoWrite';
 import { useAuth } from '../contexts/AuthContext';
@@ -22,22 +22,20 @@ const TodosContent = ({
   return (
     <div>
       <div>
-        <div>
-          {/* 새글 등록시 1페이지로 이동 후 목록 새로고침 */}
-          <TodoWrite handleChangePage={handleChangePage} />
-        </div>
-        <div>
-          <TodoList />
-        </div>
-        <div>
-          <Pagination
-            totalCount={totalCount}
-            totalPages={totalPages}
-            currentPage={currentPage}
-            itemsPerPage={itemsPerPage}
-            handleChangePage={handleChangePage}
-          />
-        </div>
+        {/* 새글 등록시 1페이지로 이동 후 목록 새로고침 */}
+        <TodoWrite handleChangePage={handleChangePage} />
+      </div>
+      <div>
+        <TodoList />
+      </div>
+      <div>
+        <Pagination
+          totalCount={totalCount}
+          totalPages={totalPages}
+          currentPage={currentPage}
+          itemsPerPage={itemsPerPage}
+          handleChangePage={handleChangePage}
+        />
       </div>
     </div>
   );
@@ -74,7 +72,11 @@ function TodosPage() {
   }, []);
   return (
     <div>
-      <h2>{profile?.nickname} | 할일</h2>
+      <div className="page-header">
+        <h2 className="page-title">📝 할일 관리</h2>
+        {profile?.nickname && <p className="page-subtitle">{profile?.nickname}님의 Todo관리</p>}
+      </div>
+
       <TodoProvider currentPage={currentPage} limit={itemsPerPage}>
         <TodosContent
           currentPage={currentPage}
