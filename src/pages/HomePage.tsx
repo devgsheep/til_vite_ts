@@ -27,10 +27,14 @@ function HomePage() {
               flexWrap: 'wrap',
             }}
           >
-            <Link to={'/todos'} className="btn btn-primary btn-lg">
+            <Link to={'/todos'} className="btn btn-primary btn-lg" style={{ color: 'white' }}>
               할 일 관리하기
             </Link>
-            <Link to={'/todos-infinite'} className="btn btn-success btn-lg">
+            <Link
+              to={'/todos-infinite'}
+              className="btn btn-success btn-lg"
+              style={{ color: 'white' }}
+            >
               무한 스크롤로 보기
             </Link>
           </div>
