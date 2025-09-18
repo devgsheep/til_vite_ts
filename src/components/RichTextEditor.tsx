@@ -44,7 +44,7 @@ const RichTextEditor = ({
   // React Quill의 툴바의 파일 추가(이미지 아이콘 클릭 처리)를 수정
   // 리랜더링시 다시 함수를 만들지 않도록 useCallback으로 보관
   const imageHandler = useCallback(() => {
-    alert('우리꺼');
+    // alert('우리꺼');
     // input 태그를 코딩으로 만들어 낸다.
     // <input type="file" accept="image/*" onchange="" />
     const input = document.createElement('input');
