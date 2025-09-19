@@ -44,11 +44,11 @@ const RichTextEditor = ({
   // React Quill의 툴바의 파일 추가(이미지 아이콘 클릭 처리)를 수정
   // 리랜더링시 다시 함수를 만들지 않도록 useCallback으로 보관
   const imageHandler = useCallback(() => {
-    // alert('우리꺼');
     // input 태그를 코딩으로 만들어 낸다.
     // <input type="file" accept="image/*" onchange="" />
     const input = document.createElement('input');
     input.setAttribute('type', 'file');
+    input.setAttribute('multple', 'true');
     input.setAttribute('accept', 'image/*');
     input.click();
     input.onchange = async () => {
@@ -94,6 +94,9 @@ const RichTextEditor = ({
           img.style.display = 'block';
           img.style.margin = '10px 0';
 
+          // 유일한 ID를 부여해서 추후 비교용으로 활용
+          img.setAttribute('data-temp-id', tempId);
+
           const p = document.createElement('p');
           p.appendChild(img);
 
@@ -119,7 +122,7 @@ const RichTextEditor = ({
           console.log('이미지 삽입 중 오류 : ', error);
           // 오류 이더라도 다시 html을 추가해 봄.
           try {
-            const imgHtml = `<img src=${tempUrl} style="max-width:"100%"; height:"auto"; margin: "10px 0"" />`;
+            const imgHtml = `<img src=${tempUrl} data-temp-id=${tempId} style="max-width:"100%"; height:"auto"; margin: "10px 0"" />`;
             quill.clipboard.dangerouslyPasteHTML(insertIndex, imgHtml);
             quill.setSelection(insertIndex + 1);
           } catch (err) {
@@ -143,23 +146,48 @@ const RichTextEditor = ({
     const usedTempUrls = new Set<string>();
     // 내용에서 blob으로 된 글자를 찾아줄 겁니다.
     // 글자들을 비교할때 정규표현식(Reaular Expression)을 사용함.
-    const tempUrlRegex = /blob:[^""\s]+/g;
+    const tempUrlRegex = /blob:[^"'\s]+/g;
     // 실제로 비교를 실행
+    // const matchs = valueRef.current.match(tempUrlRegex);
+    // if (matchs) {
+    //   matchs.forEach(item => usedTempUrls.add(item));
+    // }
+
+    // 오류개선
     const matchs = valueRef.current.match(tempUrlRegex);
-    if (matchs) {
-      matchs.forEach(item => usedTempUrls.add(item));
-    }
+    // 순서대로 표시된 이미지를 재정렬
+    const orderdImages: TempImageFile[] = [];
+    matchs?.forEach(tempUrl => {
+      const foundImage = tempImagesRef.current.find(item => item.tempUrl === tempUrl);
+      if (foundImage && !usedTempUrls.has(tempUrl)) {
+        orderdImages.push(foundImage);
+        usedTempUrls.add(tempUrl);
+      }
+    });
+
     // 사용하지 않는 임시 이미지들 정리
     // 메모리 누수를 막아주기 위해서
-    tempImagesRef.current = tempImagesRef.current.filter(item => {
-      const isUsed = usedTempUrls.has(item.tempUrl);
-      // 내용에 임시 미리보기 URL 글자가 없다면 삭제해야 한다.
-      if (!isUsed) {
-        // 사용하지 않는 blob URL 정리하기
+    // tempImagesRef.current = tempImagesRef.current.filter(item => {
+    // const isUsed = usedTempUrls.has(item.tempUrl);
+    // // 내용에 임시 미리보기 URL 글자가 없다면 삭제해야 한다.
+    // if (!isUsed) {
+    //   // 사용하지 않는 blob URL 정리하기
+    //   URL.revokeObjectURL(item.tempUrl);
+    // }
+    // return isUsed;
+    // });
+
+    // 개선된 코드 : 사용하지 않는 임시 이미지들을 정리
+    // 메모리 누수를 막아주기 위해서
+    tempImagesRef.current.forEach(item => {
+      if (!usedTempUrls.has(item.tempUrl)) {
+        // 사용하지 않는 blob url을 정리하기
         URL.revokeObjectURL(item.tempUrl);
+        console.log(`이미지 삭제됨 : ${item.id} ${item.tempUrl}`);
       }
-      return isUsed;
     });
+    // 에디터 순서대로 재정렬된 배열로 업데이트
+    tempImagesRef.current = orderdImages;
   }, []);
 
   // 에디터의 내용이 변경되면 임시 이미지 동기화
@@ -221,7 +249,7 @@ const RichTextEditor = ({
       const imagesFiles = tempImagesRef.current.map(item => item.file);
       onImagesChange(imagesFiles);
     }
-  }, [onImagesChange, tempImagesRef.current.length]);
+  }, [onImagesChange, value]); // 에디터에 내용이 바뀔때마다 이미지 목록 업데이트
 
   // 에디터가 마운트 되면
   //  즉, 화면에 보이면 이미지 버튼에 이벤트 리스너 추가
