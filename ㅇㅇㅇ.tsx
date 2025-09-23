@@ -1,312 +1,392 @@
-import { useCallback, useEffect, useRef } from 'react';
-import ReactQuill, { Quill } from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import { useState } from 'react';
+import KakaoLoginButton from '../components/KakaoLoginButton';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
-// 임시 미리보기 이미지의 데이터 형태
-interface TempImageFile {
-  file: File; // 사용자가 실제로 선택한 파일
-  tempUrl: string; // URL.createObjectURL 로 만든 blob 임시 URL (본문 보여줌)
-  id: string; // 관리를 위한 ID 를 할당
-}
+function SignUpPage() {
+  const { signUp, checkEmailExists, checkNicknameExists } = useAuth();
+  const [email, setEmail] = useState<string>('');
+  const [pw, setPw] = useState<string>('');
 
-interface RichTextEditorProps {
-  children?: React.ReactNode;
-  value: string; // 에디터에 초기로 보여줄 내용
-  onChange: (value: string) => void; // 내용이 변경될때 실행할 함수
-  placeholder?: string; // 안내 텍스트 (선택사항)
-  disabled?: boolean; // 에디터를 비활성화할지 여부 (선택사항)
-  onImagesChnage?: (images: File[]) => void; // 파일을 보관하는 용도
-}
-const RichTextEditor = ({
-  value,
-  onChange,
-  placeholder = '내용을 입력하세요',
-  disabled = false,
-  onImagesChnage, // 외부로 이미지를 전달하는 함수
-}: RichTextEditorProps) => {
-  // ref 변수들을 저장해둠.
-  // ReactQuill 을 보관해둡니다.
-  const quilRef = useRef<ReactQuill | null>(null);
-  // 미리보기 이미지들을 보관할 임시 목록("blob:~~")
-  const tempImagesRef = useRef<TempImageFile[]>([]);
+  // 추가 정보
+  const [nickname, setNickname] = useState<string>('');
 
-  // 가장 최근의 내용을 관리하기 위한 변수
-  const valueRef = useRef<string>(value);
+  // 이메일 중복 상태 확인
+  const [emailCheckStatus, setEmailCheckStatus] = useState<
+    'idle' | 'checking' | 'available' | 'taken'
+  >('idle');
+  // 닉네임 중복 상태 확인
+  const [nicknameCheckStatus, setNicknameCheckStatus] = useState<
+    'idle' | 'checking' | 'available' | 'taken'
+  >('idle');
 
-  // 임시 이미지 URL 생성하는 기능
-  const createTempImageUrl = useCallback((file: File): string => {
-    return URL.createObjectURL(file);
-  }, []);
+  // 이메일 중복 확인 메시지
+  const [emailCheckMessage, setEmailCheckMessage] = useState('');
 
-  // React Quill 의 툴바의 파일 추가 (이미지 아이콘 클릭 처리)를 수정
-  // 리랜더링시 다시 함수 안만들도록 useCallback 으로 보관
-  const imageHandler = useCallback(() => {
-    // alert('우리꺼');
-    // input 태그를 코딩으로 만들어 낸다.
-    // <input type="file" accept = "image/*" />
-    const input = document.createElement('input');
-    input.setAttribute('type', 'file');
-    // 여러개 선택 가능 업데이트
-    input.setAttribute('multiple', 'true');
-    input.setAttribute('accept', 'image/*');
-    input.click();
-    input.onchange = async () => {
-      // 파일 1개만 선택하도록 처리
-      const file = input.files?.[0];
-      // if (!file) return;
-      const files = input.files;
-      if (!files || files.length === 0) return;
+  // 닉네임 중복 확인 메시지
+  const [nicknameCheckMessage, setNicknameCheckMessage] = useState('');
 
-      // 실제 React Quill 내용 창에 출력
-      const quill = quilRef.current?.getEditor();
-      if (!quill) return;
-      // 어디에다가 이미지를 출력할 것인가 위치를 파악
-      const range = quill.getSelection();
-      // 특정 범위가 없다면 끝에 배치한다.
-      let insertIndex = range ? range.index : quill.getLength();
-
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-
-        // // 파일 크기를 보통 5MB 제한
-        if (file.size > 5 * 1024 * 1024) {
-          alert(`${file.name}이미지 파일 크기는 5MB 이하여야 합니다.`);
-          continue; // 이 파일은 건너띄어서 계속 실행
-        }
-
-        // 임시 주소 생성
-        const tempUrl = createTempImageUrl(file);
-        // 절대 중복되지 않는 임시 ID 를 생성하자.
-        const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-
-        // 임시 파일 및 주소를 저장
-        const tempImage: TempImageFile = {
-          file: file,
-          tempUrl: tempUrl,
-          id: tempId,
-        };
-
-        // 생성된 정보를 보관한다.
-        tempImagesRef.current.push(tempImage);
-        console.log(`이미지가 추가됨 : ${tempId}, ${tempUrl}`);
-
-        try {
-          // 직접 html 태그를 만들어서 삽입해줌.
-          // <p> <img src="" /> </p>
-          const img = document.createElement('img');
-          img.src = tempUrl;
-          img.style.maxWidth = '100%';
-          img.style.height = 'auto';
-          img.style.display = 'block';
-          img.style.margin = '10px 0';
-
-          // 유일한 ID 를 부여해서 추후 비교용으로 활용
-          img.setAttribute('data-emp-id', tempId);
-
-          const p = document.createElement('p');
-          p.appendChild(img);
-
-          // React Quill 직접 추가
-          const editorElement = quill.root;
-          // 현재 위치에 추가
-          if (insertIndex === 0) {
-            // 찾은 root Div 태그의 앞쪽에 추가한다.
-            editorElement.insertBefore(p, editorElement.firstElementChild);
-          } else {
-            const nodes = editorElement.childNodes;
-            if (insertIndex < nodes.length) {
-              editorElement.insertBefore(p, nodes[insertIndex]);
-            } else {
-              editorElement.appendChild(p);
-            }
-          }
-
-          // 다음 이미지를 위해서 입력 위치만 업데이트
-          insertIndex++;
-
-          // 강제로 리랜더링을 시킨다.
-          quill.update();
-          // 마우스 커서 위치를 설정한다.
-          quill.setSelection(insertIndex + 1);
-        } catch (error) {
-          console.log(`이미지 삽입 중 오류 : ${error}`);
-          // 오류 이더라도 다시 html 을 추가해 봄.
-          try {
-            const imgHtml = `<img src=${tempUrl} data-temp-id=${tempId} style={{maxWidth:"100%", height:"auto", margin: "10px 0"}} />`;
-            quill.clipboard.dangerouslyPasteHTML(insertIndex, imgHtml);
-            quill.setSelection(insertIndex + 1);
-          } catch (err) {
-            console.log('이미지 삽입 정말 실패 :', err);
-          }
-        }
-      }
-
-      // 모든 이미지가 배치가 되면 강제 랜더링
-      quill.update();
-      // 마우스 커서 위치 조절
-      quill.setSelection(insertIndex);
-    };
-  }, [createTempImageUrl]);
-
-  // value 변경되면 다시 value 를 보관함.
-  useEffect(() => {
-    valueRef.current = value;
-  }, [value]);
-
-  // 에디터 내용과 임시 이미지 목록 즉, tempImagesRef 의 변화를 매칭해줌. 동기화
-  // 리랜더링 되더라도 한번만 생성되게
-  const syncTempImages = useCallback(() => {
-    // 현재 에디터 내용에서 사용중인 tempUrl 을 추출함.
-    // 데이터 타입에서 Array 처럼 Set 도 있습니다.
-    const usedTempUrls = new Set<string>();
-    // 내용에서 blob 으로 된 글자를 찾아줄 겁니다.
-    // 글자들을 비교할때 정규표현식(Regular Expression) 을 사용함.
-    const tempUrlRegex = /blob:[^"'\s]+/g;
-    // 실제로 비교를 실행
-    // const matchs = valueRef.current.match(tempUrlRegex);
-    // if (matchs) {
-    //   matchs.forEach(item => usedTempUrls.add(item));
-    // }
-
-    // 오류 개선
-    const matchs = valueRef.current.match(tempUrlRegex);
-    // 순서대로 표시된 이미지를 재정렬
-    const orderdImages: TempImageFile[] = [];
-    matchs?.forEach(tempUrl => {
-      const foundImage = tempImagesRef.current.find(item => item.tempUrl === tempUrl);
-      if (foundImage && !usedTempUrls.has(tempUrl)) {
-        orderdImages.push(foundImage);
-        usedTempUrls.add(tempUrl);
-      }
-    });
-
-    // 사용하지 않는 임시 이미지들 정리
-    // 메모리 누수를 막아주기 위해서
-    // tempImagesRef.current = tempImagesRef.current.filter(item => {
-    //   // const isUsed = usedTempUrls.has(item.tempUrl);
-    //   // // 내용에 임시 미리보기 URL 글자가 없다면 삭제해야 한다.
-    //   // if (!isUsed) {
-    //   //   // 사용하지 않는 blob URL 정리하기
-    //   //   URL.revokeObjectURL(item.tempUrl);
-    //   // }
-    //   // return isUsed;
-    // });
-
-    // 개선된 코드 : 사용하지 않는 임시 이미지들을 정리
-    tempImagesRef.current.forEach(item => {
-      if (!usedTempUrls.has(item.tempUrl)) {
-        // 사용하지 않는 blob url 을 정리하기
-        URL.revokeObjectURL(item.tempUrl);
-        console.log(`이미지 삭제됨 : ${item.id} ${item.tempUrl}`);
-      }
-    });
-    // 에디터 순서대로 재 정렬된 배열로 업데이트
-    tempImagesRef.current = orderdImages;
-  }, []);
-
-  // 에디터의 내용이 변경되면 임시 이미지 동기화
-  useEffect(() => {
-    syncTempImages();
-  }, [value, syncTempImages]);
-
-  // 툴바 설정 - 에디터 상단에 표시될 버튼들을 정의
-  const modules = {
-    toolbar: [
-      // 헤더 옵션: H1, H2, H3, 일반 텍스트
-      [{ header: [1, 2, 3, false] }],
-
-      // 텍스트 서식 옵션
-      ['bold', 'italic', 'underline', 'strike'],
-
-      // 색상 옵션: 텍스트 색상, 배경 색상
-      [{ color: [] }, { background: [] }],
-
-      // 텍스트 정렬 옵션: 왼쪽, 가운데, 오른쪽, 양쪽 정렬
-      [{ align: [] }],
-
-      // 목록 옵션: 순서 있는 목록, 순서 없는 목록
-      [{ list: 'ordered' }, { list: 'bullet' }],
-
-      // 들여쓰기 옵션: 왼쪽으로 들여쓰기, 오른쪽으로 들여쓰기
-      [{ indent: '-1' }, { indent: '+1' }],
-
-      // 링크와 이미지 삽입 옵션
-      ['link', 'image'],
-
-      // 서식 제거 옵션: 선택한 텍스트의 모든 서식을 제거
-      ['clean'],
-    ],
-  };
-  // 에디터에서 허용할 HTML 태그들을 정의
-  // 이 배열에 포함된 태그만 에디터에서 사용할 수 있음
-  const formats = [
-    'header', // 헤더 태그 (h1, h2, h3)
-    'bold', // 굵은 글씨 (strong, b)
-    'italic', // 기울임 글씨 (em, i)
-    'underline', // 밑줄 (u)
-    'strike', // 취소선 (s, del)
-    'color', // 텍스트 색상 (span with color)
-    'background', // 배경 색상 (span with background-color)
-    'align', // 텍스트 정렬 (text-align)
-    'list', // 목록 (ul, ol)
-    'bullet', // 순서 없는 목록 (ul)
-    'indent', // 들여쓰기 (margin-left)
-    'link', // 링크 (a)
-    'image', // 이미지 (img)
-  ];
-
-  // 이미지 파일을 외부로 전달
-  useEffect(() => {
-    if (onImagesChnage) {
-      // 실제 화면에 보이는 파일만 배열요소로 추출
-      const imagesFiles = tempImagesRef.current.map(item => item.file);
-      onImagesChnage(imagesFiles);
+  // 이메일 중복 확인 함수
+  const handleEmailCheck = async () => {
+    if (!email.trim()) {
+      setEmailCheckMessage('이메일을 입력해주세요.');
+      setEmailCheckStatus('taken');
+      return;
     }
-  }, [onImagesChnage, value]); // 에디터에 내용이 바뀔때마다 이미지 목록 업데이트
-
-  // 에디터가 마운트 되면
-  // 즉, 화면에 보이면 이미지 버튼에 이벤트 리스너 추가
-  useEffect(() => {
-    // 약간 시간을 두고 핸들러 등록 (에디터가 초기화 하는 데 시간걸림)
-    const timer = setTimeout(() => {
-      const quill = quilRef.current?.getEditor();
-      if (quill) {
-        console.log('Quill 에디터 초기화 성공!');
-        const toolbar = quill.getModule('toolbar') as any;
-        if (toolbar && toolbar.addHandler) {
-          console.log('이미지 핸들러 등록 실행 함');
-          // 우리가 원하는 핸들러 등록
-          toolbar.addHandler('image', imageHandler);
-        }
+    // 입력된 글자가 email 형식에 맞는지 정규표현식으로 검사
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setEmailCheckMessage('올바른 이메일 형식을 입력해주세요.');
+      setEmailCheckStatus('taken');
+      return;
+    }
+    setEmailCheckStatus('checking');
+    setEmailCheckMessage('이메일 중복 확인 중...');
+    try {
+      // DB 에 직접 이메일 글자를 보내고 중복확인 진행.
+      const result = await checkEmailExists(email);
+      if (result.error) {
+        setEmailCheckMessage(`오류 : ${result.error}`);
+        setEmailCheckStatus('taken');
+      } else if (result.exists) {
+        setEmailCheckMessage('이미 사용 중인 이메일 입니다.');
+        setEmailCheckStatus('taken');
+      } else {
+        setEmailCheckMessage('사용 가능한 이메일입니다.');
+        setEmailCheckStatus('available');
       }
-    }, 100);
+    } catch (error) {
+      setEmailCheckMessage('이메일 중복 확인 중 오류가 발생했습니다.');
+      setEmailCheckStatus('taken');
+    }
+  };
 
-    // 클린업 함수
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [imageHandler]);
+  // 닉네임 중복 확인 함수
+  const handleNicknameCheck = async () => {
+    if (!nickname.trim()) {
+      setNicknameCheckMessage('닉네임을 입력해주세요.');
+      setNicknameCheckStatus('taken');
+      return;
+    }
+    if (nickname.trim().length < 2) {
+      setNicknameCheckMessage('닉네임은 2자 이상 입력해 주세요.');
+      setNicknameCheckStatus('taken');
+      return;
+    }
+    setNicknameCheckStatus('checking');
+    setNicknameCheckMessage('닉네임 중복 확인 중...');
+    try {
+      // DB 에 직접 닉네임 글자를 보내고 중복확인 진행.
+      const result = await checkNicknameExists(nickname);
+      if (result.error) {
+        setNicknameCheckMessage(`오류 : ${result.error}`);
+        setNicknameCheckStatus('taken');
+      } else if (result.exists) {
+        setNicknameCheckMessage('이미 사용 중인 닉네임 입니다.');
+        setNicknameCheckStatus('taken');
+      } else {
+        setNicknameCheckMessage('사용 가능한 닉네임입니다.');
+        setNicknameCheckStatus('available');
+      }
+    } catch (error) {
+      setNicknameCheckMessage('닉네임 중복 확인 중 오류가 발생했습니다.');
+      setNicknameCheckStatus('taken');
+    }
+  };
 
-  // // 디버깅 용
-  // useEffect(() => {
-  //   console.log('이미지 관리 목록이 바뀌었어요.');
-  //   console.log(tempImagesRef);
-  // }, [tempImagesRef]);
+  const [msg, setMsg] = useState<string>('');
 
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    // 웹브라우저 갱신 방지
+    e.preventDefault();
+    if (!email.trim()) {
+      alert('이메일을 입력하세요.');
+      return;
+    }
+    if (!pw.trim()) {
+      alert('비밀번호를 입력하세요.');
+      return;
+    }
+    if (pw.length < 6) {
+      alert('비밀번호를 입력하세요.');
+      return;
+    }
+    if (!nickname.trim()) {
+      alert('닉네임을 입력하세요.');
+      return;
+    }
+
+    // 회원가입 하기
+    const { error, data } = await supabase.auth.signUp({
+      email,
+      password: pw,
+      options: {
+        // 회원가입 후 이메일로 인증 확인시 리다이렉트 될 URL
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        // 잠시 추가정보를 보관합니다.
+        // supabase 에서 auth 에는 추가적인 정보를 저장하는 객체가 존재
+        // 공식적인 명칭이 metadata 라고 합니다.
+        // 이메일 인증 후에 프로필 생성시에 사용하려고 보관
+        data: { nickname: nickname },
+      },
+    });
+    if (error) {
+      setMsg(`회원가입 오류 : ${error}`);
+    } else {
+      // 회원가입 성공했으므로 profiles 도 채워준다.
+      setMsg(
+        '회원가입이 성공했습니다. 이메일 인증 링크를 확인해주세요. 인증 완료후 프로필이 자동으로 생성됩니다.',
+      );
+
+      // if (data.user?.id) {
+      //   // 프로필을 추가한다
+      //   const newUser: ProfileInsert = { id: data.user.id, nickname: nickname };
+      //   const result = await createProfile(newUser);
+      //   if (result) {
+      //     // 프로필 추가가 성공한 경우
+      //     setMsg('회원가입 및 프로필 생성 성공했습니다. 이메일 인증 링크를 확인해 주세요');
+      //   } else {
+      //     setMsg(`회원가입은 성공, 하지만, 프로필 생성 실패했습니다`);
+      //   }
+      // }
+      // setMsg(`회원가입 성공했습니다. 이메일 인증 링크를 확인해 주세요`);
+    }
+  };
   return (
     <div>
-      <ReactQuill
-        ref={quilRef} // React Quill 인스턴스를 보관해 둠.
-        theme="snow" // 테마
-        value={value} // 에디터에 보여줄 내용
-        onChange={onChange} // 내용 변경시 실행할 함수
-        modules={modules} // 툴바에 기능 설정
-        formats={formats} // 허용할 HTML 태그
-        placeholder={placeholder} // 안내 글자
-        readOnly={disabled} // 읽기전용여부
-      />
+      <div className="page-header">
+        <h2 className="page-title">회원가입</h2>
+        <p className="page-subtitle">새 계정을 만들어 보세요.</p>
+      </div>
+      <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label className="form-label">이메일</label>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+              {/* 이메일 입력 태그 */}
+              <input
+                type="email"
+                value={email}
+                onChange={e => {
+                  setEmail(e.target.value);
+                  if (emailCheckStatus !== 'idle') {
+                    setEmailCheckStatus('idle');
+                    setEmailCheckMessage('');
+                  }
+                }}
+                placeholder="example@example.com"
+                className="form-input"
+                required
+                style={{ flex: 1 }}
+              />
+              {/* 이메일 중복 체크 버튼 태그 */}
+              <button
+                type="button"
+                onClick={handleEmailCheck}
+                disabled={emailCheckStatus === 'checking'}
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: emailCheckStatus === 'available' ? '#10b981' : '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: emailCheckStatus === 'checking' ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  whiteSpace: 'nowrap',
+                  opacity: emailCheckStatus === 'checking' ? 0.6 : 1,
+                }}
+              >
+                {emailCheckStatus === 'checking' ? '확인중...' : '중복확인'}
+              </button>
+            </div>
+            {/* 이메일 체크 결과 메시지 영역 */}
+            {emailCheckMessage && (
+              <div
+                style={{
+                  marginTop: '4px',
+                  fontSize: '14px',
+                  color:
+                    emailCheckStatus === 'available'
+                      ? '#10b981'
+                      : emailCheckStatus === 'taken'
+                        ? '#ef4444'
+                        : '#6b7280',
+                }}
+              >
+                {emailCheckStatus === 'checking' && '⏳ '}
+                {emailCheckStatus === 'available' && '✅ '}
+                {emailCheckStatus === 'taken' && '❌ '}
+                {emailCheckMessage}
+              </div>
+            )}
+          </div>
+          <div className="form-group">
+            <label className="form-label">비밀번호</label>{' '}
+            <input
+              type="password"
+              value={pw}
+              onChange={e => setPw(e.target.value)}
+              placeholder="비밀번호를 입력해주세요 (최소 6자)"
+              className="form-input"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">닉네임</label>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+              {/* 닉네임 입력 태그 */}
+              <input
+                type="text"
+                value={nickname}
+                onChange={e => {
+                  setNickname(e.target.value);
+                  if (emailCheckStatus !== 'idle') {
+                    setNicknameCheckStatus('idle');
+                    setNicknameCheckMessage('');
+                  }
+                }}
+                placeholder="닉네임을 입력해주세요"
+                className="form-input"
+                required
+                style={{ flex: 1 }}
+              />
+              {/* 닉네임 중복 체크 버튼 태그 */}
+
+              <button
+                type="button"
+                onClick={handleNicknameCheck}
+                disabled={nicknameCheckStatus === 'checking'}
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: nicknameCheckStatus === 'available' ? '#10b981' : '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: nicknameCheckStatus === 'checking' ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  whiteSpace: 'nowrap',
+                  opacity: nicknameCheckStatus === 'checking' ? 0.6 : 1,
+                }}
+              >
+                {nicknameCheckStatus === 'checking' ? '확인중...' : '중복확인'}
+              </button>
+            </div>
+            {/* 닉네임 체크 결과 메시지 영역 */}
+            {nicknameCheckMessage && (
+              <div
+                style={{
+                  marginTop: '4px',
+                  fontSize: '14px',
+                  color:
+                    nicknameCheckStatus === 'available'
+                      ? '#10b981'
+                      : nicknameCheckStatus === 'taken'
+                        ? '#ef4444'
+                        : '#6b7280',
+                }}
+              >
+                {nicknameCheckStatus === 'checking' && '⏳ '}
+                {nicknameCheckStatus === 'available' && '✅ '}
+                {nicknameCheckStatus === 'taken' && '❌ '}
+                {nicknameCheckMessage}
+              </div>
+            )}
+          </div>
+          {/* 이메일 및 닉네임 중복체크 요청 출력 및 회원가입 */}
+          <button
+            type="submit"
+            style={{
+              width: '100%',
+              opacity:
+                emailCheckStatus !== 'available' || nicknameCheckStatus !== 'available' ? 0.5 : 1,
+              cursor:
+                emailCheckStatus !== 'available' || nicknameCheckStatus !== 'available'
+                  ? 'not-allowed'
+                  : 'pointer',
+            }}
+            className="btn btn-success btn-lg"
+            disabled={emailCheckStatus !== 'available' || nicknameCheckStatus !== 'available'}
+          >
+            {emailCheckStatus !== 'available' || nicknameCheckStatus !== 'available'
+              ? '이메일 및 닉네임 중복 확인 필요'
+              : '회원가입'}
+          </button>
+          {/* 중복 확인 상태 안내 */}
+          {(emailCheckStatus === 'idle' || nicknameCheckStatus === 'idle') && (
+            <div
+              style={{
+                marginTop: '8px',
+                padding: '8px 12px',
+                backgroundColor: '#fef3c7',
+                border: '1px solid #f59e0b',
+                borderRadius: '4px',
+                fontSize: '14px',
+                color: '#92400e',
+                textAlign: 'center',
+              }}
+            >
+              ⚠️ 이메일 및 닉네임 중복 확인을 완료해주세요.
+            </div>
+          )}
+          {emailCheckStatus === 'taken' && (
+            <div
+              style={{
+                marginTop: '8px',
+                padding: '8px 12px',
+                backgroundColor: '#fee2e2',
+                border: '1px solid #ef4444',
+                borderRadius: '4px',
+                fontSize: '14px',
+                color: '#dc2626',
+                textAlign: 'center',
+              }}
+            >
+              ❌ 이미 사용 중인 이메일입니다. 다른 이메일을 사용하거나 해당 이메일로 로그인해주세요.
+            </div>
+          )}
+          {nicknameCheckStatus === 'taken' && (
+            <div
+              style={{
+                marginTop: '8px',
+                padding: '8px 12px',
+                backgroundColor: '#fee2e2',
+                border: '1px solid #ef4444',
+                borderRadius: '4px',
+                fontSize: '14px',
+                color: '#dc2626',
+                textAlign: 'center',
+              }}
+            >
+              ❌ 이미 사용 중인 닉네임입니다. 다른 닉네임을 사용해주세요.
+            </div>
+          )}
+        </form>
+        {/* SNS 로그인 영역 */}
+        <div style={{ display: 'flex', alignItems: 'center', margin: 'var(--space-6)' }}>
+          <div style={{ flex: 1, height: 1, backgroundColor: 'var(--gray-300)' }}></div>
+          <span style={{ padding: '0 var(--space-4)', fontSize: '14px' }}>또는</span>
+          <div style={{ flex: 1, height: 1, backgroundColor: 'var(--gray-300)' }}></div>
+        </div>
+        {/* 카카오 로그인 버튼 : 오류 메시지는 사용자도 볼 수 있어야 함.*/}
+        <KakaoLoginButton onError={error => setMsg(`카카오 로그인 오류 : ${error}`)} />
+        {/* 메시지 출력 */}
+        {msg && (
+          <p
+            style={{
+              marginTop: 'var(--space-4)',
+              padding: 'var(--space-3)',
+              borderRadius: 'var(--radius-md)',
+              backgroundColor: msg.includes('성공') ? 'var(--success-50)' : '#fef2f2',
+              color: msg.includes('성공') ? 'var(--success-600)' : '#dc2626',
+              border: `1px solid ${msg.includes('성공') ? 'var(--success-600)' : '#dc2626'}`,
+            }}
+          >
+            {msg}
+          </p>
+        )}
+      </div>
     </div>
   );
-};
+}
 
-export default RichTextEditor;
+export default SignUpPage;
