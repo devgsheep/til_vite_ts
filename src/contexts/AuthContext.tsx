@@ -17,7 +17,7 @@ type AuthContextType = {
   // 이메일 중복 확인 함수
   checkEmailExists: (email: string) => Promise<{ exists: boolean; error?: string }>;
   // 닉네임 중복 확인 함수
-  checkNicknameExists: (nickname: string) => Promise<{ exists: boolean; error?: string }>;
+  checkNicknameExists: (nickname: string) => Promise<any>;
   // 카카오 로그인 함수
   signInWithKakao: () => Promise<{ error?: string }>;
   // 구글 로그인 함수
@@ -26,6 +26,10 @@ type AuthContextType = {
   unlinkKakaoAccount: () => Promise<{ error?: string; success?: boolean; message?: string }>;
   // 구글 계정 연동 해제 함수
   unlinkGoogleAccount: () => Promise<{ error?: string; success?: boolean; message?: string }>;
+  // 비밀번호 변경 함수
+  changePassword: (
+    newPassword: string,
+  ) => Promise<{ error?: string; success?: boolean; message?: string }>;
 
   // 회원 로그아웃
   signOut: () => Promise<void>;
@@ -221,7 +225,7 @@ export const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
       }
       // supabase에서 구글 계정 연동 해제
       // 사용자의 구글 identity 찾기
-      const googleIdentity = user.identities?.find(item => item.provider === 'kakao');
+      const googleIdentity = user.identities?.find(item => item.provider === 'google');
       if (!googleIdentity) {
         return { error: '구글 계정 연동 정보를 찾을 수 없습니다.' };
       }
@@ -239,6 +243,33 @@ export const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
     } catch (err) {
       console.log(`구글 계정 연동 해제 오류 : `, err);
       return { error: '구글 계정 연동 해제 중 오류가 발생했습니다.' };
+    }
+  };
+
+  // 비밀번호 변경 함수
+  const changePassword: AuthContextType['changePassword'] = async (newPassword: string) => {
+    try {
+      // 이메일 로그인 사용자인지 확인
+      if (user?.app_metadata.provider && user.app_metadata.provider !== 'email') {
+        return { error: '이메일 로그인 사용자만 비밀번호를 변경 할 수 있습니다.' };
+      }
+      // 비밀번호 길이 확인
+      if (newPassword.length < 6) {
+        return { error: '비밀번호는 최소 6자 이상이어야 합니다.' };
+      }
+      // Supabase에서 비밀번호 업데이트
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        console.log('비밀번호 변경 실패 : ', error.message);
+        return { error: '비밀번호 변경에 실패했습니다.' };
+      }
+      return {
+        success: true,
+        message: '비밀번호가 성공적으로 변경되었습니다.',
+      };
+    } catch (err) {
+      console.log('비밀번호 변경 오류: ', err);
+      return { error: '비밀번호 변경 중 오류가 발생했습니다.' };
     }
   };
 
@@ -310,6 +341,7 @@ export const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
     signInWithGoogle,
     unlinkKakaoAccount,
     unlinkGoogleAccount,
+    changePassword,
     signOut,
     user,
     session,

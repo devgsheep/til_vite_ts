@@ -17,19 +17,30 @@ function AuthCallback() {
   // 리다이렉트가 가능한지 아닌지 보관
   const [shouldRedirect, setShouldRedirect] = useState(false);
   const navigate = useNavigate();
-
-  // 카카오 로그인 시 닉네임 추출
+  // 닉네임 추출
   const extractNickname = (user: any, isOAuthLogin: boolean, loginType: string): string => {
-    let nickname = user.user_metadata.nickname;
-    if (isOAuthLogin && !nickname) {
+    let nickname = '';
+
+    if (isOAuthLogin) {
+      // OAuth 로그인 (카카오, 구글)인 경우
       nickname =
+        user.user_metadata.nickname ||
         user.app_metadata.full_name ||
         user.app_metadata.name ||
         user.user_metadata.full_name ||
         user.user_metadata.name ||
         user.email?.split('@')[0] ||
         (loginType === '카카오 로그인' ? '카카오사용자' : '구글사용자');
+    } else {
+      // 이메일 로그인인 경우 - 회원가입 시 저장한 닉네임 사용
+      nickname = user.user_metadata.nickName || user.user_metadata.nickname;
+
+      // 닉네임이 없으면 이메일에서 추출
+      if (!nickname) {
+        nickname = user.email?.split('@')[0] || '이메일사용자';
+      }
     }
+
     return nickname;
   };
 
@@ -153,14 +164,12 @@ function AuthCallback() {
         loginType = '카카오 로그인';
       } else if (isGoogleLogin) {
         loginType = '구글 로그인';
-      } else {
-        loginType = '이메일 인증';
       }
 
       // OAuth 로그인 이메일
 
       // 카카오 로그인 이메일 중복 확인 (임시 비활성화)
-      if (isKakaoLogin && user.email) {
+      if (isOAuthLogin && user.email) {
         console.log(`${loginType} - 이메일 중복 확인 비활성화`);
         console.log(user.email);
       }
