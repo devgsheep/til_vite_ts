@@ -5,6 +5,8 @@
  */
 
 import { useEffect, useState } from 'react';
+import { useDirectChat } from '../../../contexts/DirectChatContext';
+import type { ChatUser } from '../../../types/ChatType';
 
 // Props 정의
 interface DirectChatListProps {
@@ -14,28 +16,52 @@ interface DirectChatListProps {
   selectedChatId?: string; // 현재 선택된 채팅방의 ID
 }
 
-// 사용자 검색 시 생성되어지는 객체 형태의 모양
-interface ChatUser {
-  id: string; // 사용자 고유 식별자 (UUID)
-  email: string; // 사용자 이메일 주소
-  nickname: string; // 표시용 닉네임
-  avatar_url?: string; // 프로필 이미지 URL (선택사항)
-}
-
 const DirectChatList = ({ onChatSelect, onCreateChat, selectedChatId }: DirectChatListProps) => {
-  // DB에서 읽어온 데이터를 관리함 : 여러곳에서 활용하는 데이터 이므로 Context를 활용예정
-  const [users, setUsers] = useState<ChatUser[]>([]);
+  // Context 활용
+  const { loadChats, createDirectChat, error, users, searchUsers, loading, chats } =
+    useDirectChat();
+
   // 사용자 검색 상태 관리
   const [searchTerm, setSearchTerm] = useState<string>(''); // 사용자 검색어
   const [showUserSearch, setShowUserSearch] = useState<boolean>(false); // 사용자 검색 UI 표시 여부
+
+  // 최초에 컴포넌트 마운트시 채팅 목록
+  useEffect(() => {
+    loadChats();
+  }, [loadChats]); // 신규 또는 메시지 전송 등으로 업데이트 시 채팅목록 호출
+
   // 컴포넌트가 변경시 사용자 검색 즉시 실행
   // 검색어가 비어있지 않을 때만 검색 수행
   useEffect(() => {
     // 사용자 검색어가 만약 있다면
     if (searchTerm.trim()) {
-      console.log('db에서 사용자 닉네임을 실시간으로 검색');
+      // console.log('db에서 사용자 닉네임을 실시간으로 검색');
+      // 검색어가 입력이 되면 Service의 사용자 검색 API를 호출해야 한다.
+      searchUsers(searchTerm);
     }
-  }, [searchTerm]);
+  }, [searchTerm, searchUsers]);
+
+  // 날짜 관련 포맷 설정
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+
+    // 24시간 이내인 경우 시간만 표시
+    if (diffInHours < 24) {
+      return date.toLocaleTimeString('ko-KR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false, // 24시간 형식 사용
+      });
+    } else {
+      // 24시간 이후인 경우 날짜만 표시
+      return date.toLocaleDateString('ko-KR', {
+        month: 'short', // 짧은 월 이름 (예: "12월")
+        day: 'numeric', // 숫자 날짜 (예: "25")
+      });
+    }
+  };
 
   /**
    * 사용자 선택 시 새 채팅방 생성 및 선택
@@ -45,14 +71,28 @@ const DirectChatList = ({ onChatSelect, onCreateChat, selectedChatId }: DirectCh
    * 3. 사용자 검색 UI 숨김
    * 4. 사용자 검색어 초기화
    */
-
-  const handleUserSelect = (user: ChatUser) => {
-    // 사용자 선택됨.
-    // 사용자의 id를 이용해서 채팅방을 생성해야 합니다.
-    onChatSelect(user.id); // 새로운 채팅방 생성
-    setShowUserSearch(false); // 사용자 검색 UI 숨기기
-    setSearchTerm(''); // 검색어 초기화
+  const handleUserSelect = async (user: ChatUser) => {
+    // 상대방 선택됨.
+    // 상대방의 id를 이용해서 채팅방을 생성해야 합니다.
+    const chatId = await createDirectChat(user.id);
+    if (chatId) {
+      onChatSelect(user.id); // 새로운 채팅방 생성
+      setShowUserSearch(false); // 사용자 검색 UI 숨기기
+      setSearchTerm(''); // 검색어 초기화
+    }
   };
+
+  // 에러 상태일 때 에러 메시지 표시
+  if (error) {
+    return (
+      <div className="chat-list">
+        <div className='error-message'>
+          <p>오류 : {error}</p>
+          <button onClick={loadChats}>다시 시도</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="chat-list">
@@ -107,40 +147,59 @@ const DirectChatList = ({ onChatSelect, onCreateChat, selectedChatId }: DirectCh
       )}
       {/* 채팅 목록 컨테이너 */}
       <div className="chat-items">
-        {/* 로딩 표시 */}
-        {/* <div className="loading">로딩 중...</div> */}
-        {/* 채팅방이 없을 때 안내 메시지 */}
-        {/* <div className="no-chats">
-          <p>아직 채팅방이 없습니다.</p>
-        </div> */}
-
-        {/* 채팅 목록 렌더링 */}
-        <div className="chat-item">
-          {/* 채팅 상대방 아바타 */}
-          <div className="chat-avatar">
-            <img src="https://pal.icepeng.com/assets/PalIcon/T_SheepBall_icon_normal.png" alt="" />
-            {/* 아바타 이미지가 없는 경우 */}
-            {/* <div className="avatar-placeholder">도</div> */}
-
-            {/* 읽지 않은 메시지 개수 배지 */}
-            <div className="unread-badge">5</div>
+        {loading ? (
+          // 로딩표시
+          <div className="loading">로딩 중...</div>
+        ) : chats.length === 0 ? (
+          // 채팅방이 없을 때 안내 메시지
+          <div className="no-chats">
+            <p>아직 채팅방이 없습니다.</p>
           </div>
-          {/* 채팅 정보 */}
-          <div className="chat-info">
-            {/* 채팅 헤더 - 이름과 시간 */}
-            <div className="chat-header">
-              <div className="chat-name">도로롱</div>
-              <div className="chat-time">1시간 전</div>
+        ) : (
+          // 채팅 목록 렌더링
+          chats.map(chat => (
+            // 개별 채팅 아이템
+            <div
+              key={chat.id}
+              className={`chat-item ${selectedChatId === chat.id ? 'selected' : ''}`}
+              onClick={() => onChatSelect(chat.id)}
+            >
+              {/* 채팅 상대방 아바타 */}
+              <div className="chat-avatar">
+                {chat.other_user.avatar_url ? (
+                  // 상대방 아바타 이미지가 있는 경우
+                  <img src={chat.other_user.avatar_url} alt={chat.other_user.nickname} />
+                ) : (
+                  // 상대방 아바타 이미지가 없는 경우
+                  <div className="avatar-placeholder">{chat.other_user.nickname.charAt(0)}</div>
+                )}
+                {/* 읽지 않은 메시지 개수 배지 */}
+                {chat.unread_count > 0 && <div className="unread-badge">{chat.unread_count}</div>}
+              </div>
+
+              {/* 채팅 정보 */}
+              <div className="chat-info">
+                {/* 채팅 헤더 - 이름과 시간 */}
+                <div className="chat-header">
+                  <div className="chat-name">{chat.other_user.nickname}</div>
+                  <div className="chat-time">
+                    {formatTime(chat.last_message ? chat.last_message.create_at : '')}
+                  </div>
+                </div>
+                {/* 마지막 메시지 미리보기 */}
+                <div className="chat-preview">
+                  {chat.last_message ? (
+                    <span className={chat.unread_count > 0 ? 'unread' : ''}>
+                      {chat.last_message.sender_nickname} : {chat.last_message.content}
+                    </span>
+                  ) : (
+                    <span className="no-message">메시지가 없습니다.</span>
+                  )}
+                </div>
+              </div>
             </div>
-            {/* 마지막 메시지 미리보기 */}
-            <div className="chat-preview">
-              <span className="unread">고급 팰 기름좀 주세요.</span>
-              {/* <span className="no-message">메시지가 없습니다.</span> */}
-            </div>
-          </div>
-        </div>
-        {/* 선택된 채팅 아이템 */}
-        <div className="chat-item selected"></div>
+          ))
+        )}
       </div>
     </div>
   );

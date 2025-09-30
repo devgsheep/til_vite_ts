@@ -51,15 +51,15 @@ function DirectChatPage() {
           {/* 선택된 채팅방 ID 유무 */}
           {selectedChatId ? (
             // /* 채팅방이 선택된 경우 : DirectChatRoom */
-            <DirectChatRoom />
+            <DirectChatRoom chatId={selectedChatId} />
           ) : (
             // /* 채팅방이 선택되지 않은 경우 : 환영 화면 표시 */}
             <div className="chat-welcome">
               {/* /* 환영 화면 내용 */}
               <div className="welcome-content">
-                {/* <h2>1:1 채팅</h2>
-              <p>좌측에서 채팅방을 선택하거나</p>
-              <p>매칭시스템을 통해 채팅을 시작해보세요.</p> */}
+                <h2>1:1 채팅</h2>
+                <p>좌측에서 채팅방을 선택하거나</p>
+                <p>매칭시스템을 통해 채팅을 시작해보세요.</p>
 
                 {/* 기능 안내 정보 */}
                 <div className="feature-info">
