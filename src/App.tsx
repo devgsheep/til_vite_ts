@@ -15,7 +15,7 @@ import TodoEditPage from './pages/TodoEditPage';
 import TodoDetailPage from './pages/TodoDetailPage';
 import DirectChatPage from './pages/chat/DirectChatPage';
 import './components/chat/chat.css';
-import { DirectChatProvider } from './contexts/DirectChatContext';
+import { DirectChatProider } from './contexts/DirectChatContext';
 
 const TopBar = () => {
   const { signOut, user } = useAuth();
@@ -75,7 +75,7 @@ const TopBar = () => {
 
 function App() {
   return (
-    <DirectChatProvider>
+    <DirectChatProider>
       <AuthProvider>
         <div className="container">
           <div className="page-header">
@@ -161,7 +161,7 @@ function App() {
           </Router>
         </div>
       </AuthProvider>
-    </DirectChatProvider>
+    </DirectChatProider>
   );
 }
 

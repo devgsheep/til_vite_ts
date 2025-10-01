@@ -21,7 +21,7 @@ import {
   searchUsers as searchUsersService,
   findOrCreateDirectChat,
   exitDirectChat,
-} from '../services/chat/dircetChatService';
+} from '../services/chat/directChatService';
 
 /**
  * DirectChatContext 의  Context 타입 정의
