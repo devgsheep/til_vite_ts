@@ -94,7 +94,7 @@ export const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
       password,
       options: {
         // 회원가입 후 이메일로 인증 확인시 리다이렉트 될 URL
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: 'https://til-vite-ts.vercel.app/auth/callback',
       },
     });
     if (error) {
