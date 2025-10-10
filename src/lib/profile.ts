@@ -49,7 +49,11 @@ const createProfile = async (newUserProfile: ProfileInsert): Promise<boolean> =>
 // 사용자 프로필 조회
 const getProfile = async (userId: string): Promise<Profile | null> => {
   try {
-    const { error, data } = await supabase.from('profiles').select('*').eq('id', userId).single();
+    const { error, data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
     if (error) {
       console.log(error.message);
       return null;
