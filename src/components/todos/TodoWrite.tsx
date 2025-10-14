@@ -1,15 +1,14 @@
-import React, { useState } from 'react';
-import { useTodos } from '../../contexts/TodoContext';
+import { useState } from 'react';
 import type { Todo, TodoInsert } from '../../types/TodoType';
+import { useTodos } from '../../contexts/TodoContext';
 import { createTodo } from '../../services/todoService';
 
 type TodoWriteProps = {
   children?: React.ReactNode;
   handleChangePage: (page: number) => void;
 };
-
 const TodoWrite = ({ handleChangePage }: TodoWriteProps): JSX.Element => {
-  // Context를 사용함
+  // Context 를 사용함.
   const { addTodo } = useTodos();
   const [title, setTitle] = useState<string>('');
   const [content, setContent] = useState<string>('');
@@ -21,12 +20,11 @@ const TodoWrite = ({ handleChangePage }: TodoWriteProps): JSX.Element => {
   };
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Enter') {
-      //저장하기
       handleSave();
     }
   };
 
-  // Supabase에 데이터를 Insert 한다. : 비동기
+  //  Supabase 에 데이터를 Insert 한다. : 비동기
   const handleSave = async (): Promise<void> => {
     if (!title.trim()) {
       alert('제목을 입력하세요.');
@@ -38,21 +36,23 @@ const TodoWrite = ({ handleChangePage }: TodoWriteProps): JSX.Element => {
       setSaving(true);
 
       const newTodo = { title, content };
-      // Supabase에 데이터를 Insert 함
+      // Supabase 에 데이터를 Insert 함
       // Insert 결과로 추가가 된 Todo 형태를 받아옮
       const result = await createTodo(newTodo);
       if (result) {
-        // Context에 Todo타입 데이터를 추가해 줌.
+        // Context 에 Todo 타입 데이터를 추가해 줌.
         addTodo(result);
-        // 현재 페이지를 1페이지로 이동
+
+        // 현재 페이지를 1 페이지로 이동
         handleChangePage(1);
       }
+
       // 현재 Write 컴포넌트 state 초기화
       setTitle('');
       setContent('');
     } catch (error) {
       console.log(error);
-      alert('데이터 추가에 실패하였습니다.');
+      alert('데이터 추가에 실패 하였습니다.');
     } finally {
       setSaving(false);
     }
@@ -69,7 +69,7 @@ const TodoWrite = ({ handleChangePage }: TodoWriteProps): JSX.Element => {
           onKeyDown={e => handleKeyDown(e)}
           className="form-input"
           style={{ flex: 1 }}
-          placeholder="새로울 할일을 추가해주세요"
+          placeholder="새로운 할일을 추가해주세요."
         />
         <button onClick={handleSave} className="btn btn-primary" disabled={saving}>
           {saving ? '⏳ 등록 중...' : '등록'}

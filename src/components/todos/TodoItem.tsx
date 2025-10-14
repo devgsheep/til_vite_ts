@@ -1,4 +1,4 @@
-import React, { act, useState } from 'react';
+import { useState } from 'react';
 import { useTodos } from '../../contexts/TodoContext';
 import type { Todo } from '../../types/TodoType';
 import {
@@ -13,7 +13,8 @@ type TodoItemProps = {
 };
 
 const TodoItem = ({ todo, index }: TodoItemProps): JSX.Element => {
-  const { toggleTodo, deleteTodo, editTodo, currentPage, itemsPerPage, totalCount } = useTodos();
+  const { toggleTodo, editTodo, deleteTodo, currentPage, itemsPerPage, totalCount } = useTodos();
+
   // 순서번호 매기기
   const globalIndex = totalCount - ((currentPage - 1) * itemsPerPage + index);
 
@@ -44,18 +45,12 @@ const TodoItem = ({ todo, index }: TodoItemProps): JSX.Element => {
   const handleChangeTitle = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setEditTitle(e.target.value);
   };
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Enter') {
-      // 타이틀 수정
       handleEditSave();
     }
-    if (e.key === 'Escape') {
-      // 취소하기
-      handleEditCancel();
-    }
   };
-  // 비동기로 DB에 update 한다.
+  // 비동기로 DB 에 update 한다.
   const handleEditSave = async (): Promise<void> => {
     if (!editTitle.trim()) {
       alert('제목을 입력하세요.');
@@ -65,21 +60,21 @@ const TodoItem = ({ todo, index }: TodoItemProps): JSX.Element => {
     try {
       // 수정 진행 중
       setActionLoading({ ...actionLoading, edit: true });
-      // DB의 내용 업데이트
+      // DB 의  내용 업데이트
       const result = await updateTodoService(todo.id, { title: editTitle });
 
       if (result) {
-        // context의 state.todos의 항목 1개의 타이틀 수정
+        // context 의 state.todos 의 항목 1개의 타이틀 수정
         editTodo(todo.id, editTitle);
         setIsEdit(false);
       }
     } catch (error) {
       console.log('데이터 업데이트에 실패하였습니다.');
     } finally {
+      // 수정이 마무리 됨.
       setActionLoading({ ...actionLoading, edit: false });
     }
   };
-
   const handleEditCancel = (): void => {
     setEditTitle(todo.title);
     setIsEdit(false);
@@ -88,41 +83,41 @@ const TodoItem = ({ todo, index }: TodoItemProps): JSX.Element => {
   // 비동기 통신으로 toggle 업데이트
   const handleToggle = async (): Promise<void> => {
     try {
-      // toggle이 진행됨.
+      // toggle 이 진행됨.
       setActionLoading({ ...actionLoading, toggle: true });
-      // db의 completed가 업데이트 성공시 Todo 타입 리턴
+      // db 의 completed 가 업데이트 성공시 Todo 타입 리턴
       const result = await toggleTodoService(todo.id, !todo.completed);
       if (result) {
-        // context의 state.todos의 1개 항목 completed 업데이트
+        // context 의  state.todos 의 1개 항목 completed 업데이트
         toggleTodo(todo.id);
       }
     } catch (error) {
-      console.log('데이터베이스 Toggle이 실패하였습니다.', error);
+      console.log('데이터베이스 Toggle 이 실패하였어요.', error);
     } finally {
-      // toggle이 마무리됨.
+      // toggle 이 마무리됨.
       setActionLoading({ ...actionLoading, toggle: false });
     }
   };
 
-  // db의 데이터 delete
+  // db 의 데이터 delete
   const handleDelete = async (): Promise<void> => {
     try {
-      // delete가 진행됨.
+      // 삭제가 진행됨.
       setActionLoading({ ...actionLoading, delete: true });
-      // db 삭제
+      // db 삭제기능
       await deleteTodoService(todo.id);
-      // state 삭제
+      // state 삭제기능
       deleteTodo(todo.id);
     } catch (error) {
-      console.log('DB 삭제에 실패하였습니다.', error);
+      console.log('DB 삭제가 실패하였습니다.', error);
     } finally {
-      // delete가 마무리됨.
+      // 삭제가 마무리됨.
       setActionLoading({ ...actionLoading, delete: false });
     }
   };
 
   return (
-    <li className={`todo-item ${todo.completed ? 'completed' : ''} `}>
+    <li className={`todo-item ${todo.completed ? 'completed' : ''}`}>
       {/* 출력 번호 */}
       <span className="todo-number">{globalIndex}</span>
       {isEdit ? (
@@ -138,6 +133,7 @@ const TodoItem = ({ todo, index }: TodoItemProps): JSX.Element => {
             />
             <span className="todo-date">작성일: {formatDate(todo.created_at)}</span>
           </div>
+
           <div className="todo-actions">
             <button
               onClick={handleEditSave}
@@ -172,6 +168,7 @@ const TodoItem = ({ todo, index }: TodoItemProps): JSX.Element => {
             <span className={`todo-title ${todo.completed ? 'completed' : ''}`}>{todo.title}</span>
             <span className="todo-date">작성일: {formatDate(todo.created_at)}</span>
           </div>
+
           <div className="todo-actions">
             <button
               onClick={() => setIsEdit(true)}
@@ -181,7 +178,7 @@ const TodoItem = ({ todo, index }: TodoItemProps): JSX.Element => {
               ✏️ 수정
             </button>
             <button
-              onClick={handleDelete}
+              onClick={() => handleDelete()}
               className="btn btn-danger btn-sm"
               disabled={actionLoading.toggle || actionLoading.delete}
             >

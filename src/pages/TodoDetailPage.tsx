@@ -7,15 +7,29 @@ import { deleteTodo, getTodoById, getTodos } from '../services/todoService';
 import Loading from '../components/Loading';
 import DOMPurify from 'dompurify';
 
-function TodoDetailPage({}) {
+function TodoDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  // 사용자 정보
+  const [profile, setProfile] = useState<Profile | null>(null);
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (user?.id) {
+        const userProfile = await getProfile(user.id);
+        setProfile(userProfile);
+      }
+    };
+    loadProfile();
+  }, [user?.id]);
+
   // param 값을 읽기
   const { id } = useParams<{ id: string }>();
-  // id를 이용해서 Todo 내용 가져오기
+
+  // id 를 이용해서 Todo 내용 가져오기
   const [todo, setTodo] = useState<Todo | null>(null);
-  // 상세 페이지에 오면 todo 내용을 호출해야 하므로 true 세팅
+  // 상세 페이지오면 todo 내용을 호출해야 하므로 true 셋팅
   const [loading, setLoading] = useState(true);
+
   // 현재 삭제 중인지 처리
   const [actionLoading, setActionLoading] = useState<{
     delete: boolean;
@@ -30,13 +44,14 @@ function TodoDetailPage({}) {
       try {
         setLoading(true);
         const todoData = await getTodoById(parseInt(id));
+
         if (!todoData) {
-          alert('해당 할일을 찾을 수 없습니다.');
+          alert('해당 할 일을 찾을 수 없습니다.');
           navigate('/todos');
           return;
         }
 
-        // 본인의 Todo가 아니면
+        // 본인의 Todo 인지 확인
         if (todoData.user_id !== user?.id) {
           alert('조회 권한이 없습니다.');
           navigate('/todos');
@@ -55,18 +70,6 @@ function TodoDetailPage({}) {
     loadTodo();
   }, [id, user?.id, navigate]);
 
-  // 사용자 정보
-  const [profile, setProfile] = useState<Profile | null>(null);
-  useEffect(() => {
-    const loadProfile = async () => {
-      if (user?.id) {
-        const userProfile = await getProfile(user.id);
-        setProfile(userProfile);
-      }
-    };
-    loadProfile();
-  }, [user?.id]);
-
   const handleDelete = async () => {
     if (!todo) return;
     if (!window.confirm('정말 삭제하시겠습니까?')) return;
@@ -82,8 +85,9 @@ function TodoDetailPage({}) {
   };
 
   if (loading) {
-    return <Loading message="할 일 정보를 불러오는 중..." size="lg" />;
+    return <Loading message="할 일 정보를 불러오는 중 ..." size="lg" />;
   }
+
   if (!todo) {
     return (
       <div className="card" style={{ textAlign: 'center' }}>
@@ -98,7 +102,7 @@ function TodoDetailPage({}) {
   return (
     <div>
       <div className="page-header">
-        <h2 className="page-title">할일 상세보기</h2>
+        <h2 className="page-title"> 할 일 상세보기</h2>
         {profile?.nickname && <p className="page-subtitle">{profile.nickname}님의 할 일</p>}
       </div>
       {/* 실제내용 */}
@@ -114,7 +118,7 @@ function TodoDetailPage({}) {
           <div style={{ flex: 1 }}>
             <h3
               style={{
-                // margin: '0 0 var(--space-1) 0',
+                margin: '0 0 var(--space-2) 0',
                 color: 'var(--gray-800)',
                 textDecoration: todo.completed ? 'line-through' : 'none',
                 opacity: todo.completed ? 0.7 : 1,
@@ -138,22 +142,19 @@ function TodoDetailPage({}) {
             </span>
           </div>
         </div>
-        <div
-          style={{
-            display: 'flex',
-            gap: 'var(--space-2)',
-            margin: '0 0 var(--space-4) 0',
-            justifyContent: 'end',
-          }}
-        >
+        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
           <button
             onClick={() => navigate(`/todos/edit/${todo.id}`)}
-            className="btn btn-primary"
+            className="btn btn-primary btn-sm"
             disabled={actionLoading.delete}
           >
             ✏️ 수정
           </button>
-          <button onClick={handleDelete} className="btn btn-danger" disabled={actionLoading.delete}>
+          <button
+            onClick={handleDelete}
+            className="btn btn-danger btn-sm"
+            disabled={actionLoading.delete}
+          >
             {actionLoading.delete ? '⏳ 삭제 중...' : '🗑️ 삭제'}
           </button>
         </div>
@@ -167,7 +168,8 @@ function TodoDetailPage({}) {
               marginBottom: 'var(--space-6)',
             }}
           >
-            <h4 style={{ margin: '0 0 var(--space-3) 0', color: 'var(--gray-700)' }}>상세내용</h4>
+            <h4 style={{ margin: '0 0 var(--space-3) 0', color: 'var(--gray-700)' }}>상세 내용</h4>
+
             <div
               style={{
                 margin: 0,
@@ -198,17 +200,17 @@ function TodoDetailPage({}) {
             <div>
               <span style={{ fontWeight: '500', color: 'var(--gray-600)' }}>작성일 :</span>
               <div style={{ color: 'var(--gray-600)', marginTop: 'var(--space-1)' }}>
-                {todo.created_at ? new Date(todo.created_at).toLocaleString() : '정보 없음'}
+                {todo.created_at ? new Date(todo.created_at).toLocaleString('ko-KR') : '정보 없음'}
               </div>
             </div>
             <div>
-              <span style={{ fontWeight: '500', color: 'var(--gray-600)' }}>수정일 :</span>
+              <span style={{ fontWeight: '500', color: 'var(--gray-600)' }}>수정일 : </span>
               <div style={{ color: 'var(--gray-600)', marginTop: 'var(--space-1)' }}>
-                {todo.updated_at ? new Date(todo.updated_at).toLocaleString() : '정보 없음'}
+                {todo.updated_at ? new Date(todo.updated_at).toLocaleString('ko-KR') : '정보 없음'}
               </div>
             </div>
             <div>
-              <span style={{ fontWeight: '500', color: 'var(--gray-600)' }}>작성자 :</span>
+              <span style={{ fontWeight: '500', color: 'var(--gray-600)' }}>작성자 : </span>
               <div style={{ color: 'var(--gray-600)', marginTop: 'var(--space-1)' }}>
                 {profile?.nickname || user?.email}
               </div>
@@ -218,7 +220,7 @@ function TodoDetailPage({}) {
 
         <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center' }}>
           <button className="btn btn-secondary" onClick={() => navigate('/todos')}>
-            목록으로 돌아가기
+            📋 목록으로 돌아가기
           </button>
         </div>
       </div>

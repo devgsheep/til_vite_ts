@@ -6,4 +6,4 @@ export { calcTotal } from './utils';
 export { reducer } from './reducer';
 export { ShopContext, ShopProvider } from './ShopContext';
 export { useShop } from './hooks/useShop';
-export { useShopSelectors } from './hooks/useShopSelectors';
+export { useShopSelectors } from './hooks/useShopSelcectors';

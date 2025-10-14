@@ -1,22 +1,14 @@
-export type TodoType = {
-  id: string;
-  title: string;
-  completed: boolean;
-};
+export type TodoType = { id: string; title: string; completed: boolean };
 
 // 개발자가 직접 작성해 줌.
 export type Todo = Database['public']['Tables']['todos']['Row'];
 export type TodoInsert = Database['public']['Tables']['todos']['Insert'];
 export type TodoUpdate = Database['public']['Tables']['todos']['Update'];
+
 // 사용자 정보
 export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type ProfileInsert = Database['public']['Tables']['profiles']['Insert'];
 export type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
-
-// 메모
-export type Memo = Database['public']['Tables']['memos']['Row'];
-export type MemoInsert = Database['public']['Tables']['memos']['Insert'];
-export type MemoUpdate = Database['public']['Tables']['memos']['Update'];
 
 // 삭제 신청 목록 정보
 export type DeleteRequest = Database['public']['Tables']['account_deletion_requests']['Row'];

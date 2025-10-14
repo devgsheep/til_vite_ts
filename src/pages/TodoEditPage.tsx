@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import type { Profile, Todo } from '../types/TodoType';
 import { getProfile } from '../lib/profile';
 import { getTodoById, toggleTodo, updateTodo } from '../services/todoService';
@@ -40,7 +40,7 @@ function TodoEditPage() {
     loadProfile();
   }, [user?.id]);
 
-  // todo 정보 가져오기
+  // Todo 정보 가져오기
   useEffect(() => {
     const loadTodo = async () => {
       if (!id) {
@@ -87,22 +87,24 @@ function TodoEditPage() {
       const result = await toggleTodo(todo.id, !todo.completed);
       if (result) {
         setTodo(result);
-        alert(`할 일이 ${result.completed ? '완료' : '진행 중'}(으)로 변경되었습니다.`);
+        alert(`할 일이 ${result.completed ? '완료' : '진행 중'}으로 변경되었습니다.`);
       } else {
-        alert('오류가 발생하였습니다. 잠시 후 다시 시도해주세요.');
+        alert('오류가 발생하였습니다. 잠시 후 다시 시도해 주세요.');
       }
     } catch (error) {
-      console.log(error);
-      alert('에러 발생');
+      console.log('상태 변경 실패: ', error);
+      alert('에러가 발생하였습니다');
     } finally {
-      setToggleLoading(false); // toggleloading 종료
+      setToggleLoading(false);
     }
   };
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(e.target.value);
   };
-
+  // const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  //   setContent(e.target.value);
+  // };
   const handleContentChange = (value: string) => {
     setContent(value);
   };
@@ -115,13 +117,14 @@ function TodoEditPage() {
       alert('제목을 입력하세요.');
       return;
     }
+
     try {
       setSaving(true);
 
       // 파일 업데이트 처리
       // 1. 기존의 content 내용을 보관
-      // <img src="blob:~~" /> 새로이 업로드 한 이미지의 경우
-      // <img src="http://~" /> 기존 서버에 storage에 있는 경우
+      // <img src="blob:~~`/>  새로이 업로드 한 이미지인 경우
+      // <img src="http://~"   기존의 storage 에 있는 경우
       let finalContent = content;
 
       // 2. blob 파일이 존재한다면
@@ -197,23 +200,24 @@ function TodoEditPage() {
         }
       }
 
-      // 현재 finalContent는 많은 내용이 변경되었음. (기존 파일 삭제 또는 신규 파일 추가)
+      // 현재 finalContent 는 많은 내용이 변경되었음. (기존파일 삭제 또는 신규 파일 추가)
       const result = await updateTodo(todo.id, { title, content: finalContent });
       if (result) {
-        alert('할일이 성공적으로 수정되었습니다.');
+        alert('할 일이 성공적으로 수정되었습니다.');
         navigate('/todos');
       } else {
         alert('수정 중 오류가 발생하였습니다. 잠시 후 다시 시도해주세요.');
       }
     } catch (error) {
-      console.log(error);
+      console.log('수정 실패 : ', error);
+      alert('수정에 실패하였습니다');
     } finally {
       setSaving(false);
     }
   };
 
   const handleCancel = () => {
-    // 바로 취소하지 않음
+    // 바로 취소하지 않음.
     if (title !== todo?.title || content !== (todo?.content || '')) {
       if (window.confirm('수정 중인 내용이 있습니다. 정말 취소하시겠습니까?')) {
         navigate('/todos');
@@ -274,7 +278,7 @@ function TodoEditPage() {
             onChange={handleTitleChange}
             value={title}
             disabled={saving}
-            placeholder="할일을 입력하세요."
+            placeholder="할 일을 입력하세요."
           />
         </div>
         <div className="form-group">
@@ -284,14 +288,14 @@ function TodoEditPage() {
             onChange={handleContentChange}
             value={content}
             rows={6}
-            placeholder="상세 내용을 입력하세요 (선택사항)"
+            placeholder="상세 내용을 입력하세요.(선택사항)"
             disabled={saving}
           /> */}
           <RichTextEditor
             value={content}
             onChange={handleContentChange}
+            placeholder="상세 내용을 입력하세요.(선택사항)"
             disabled={saving}
-            placeholder="상세 내용을 입력하세요 (선택사항)"
             onImagesChange={handleImageChange}
           />
         </div>
@@ -335,18 +339,18 @@ function TodoEditPage() {
         {/* 버튼들 */}
         <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end' }}>
           <button
-            className="btn btn-primary"
-            disabled={saving || toggleLoading}
-            onClick={handleSave}
-          >
-            {saving ? '⏳ 수정 중...' : '수정'}
-          </button>
-          <button
             className="btn btn-secondary"
             disabled={saving || toggleLoading}
             onClick={handleCancel}
           >
             취소
+          </button>
+          <button
+            className="btn btn-primary"
+            disabled={saving || toggleLoading}
+            onClick={handleSave}
+          >
+            {saving ? '⏳ 수정 중...' : '수정'}
           </button>
         </div>
       </div>

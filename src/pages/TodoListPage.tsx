@@ -1,21 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import Pagination from '../components/Pagination';
+import TodoWriteBox from '../components/todos/TodoWriteBox';
 import { useAuth } from '../contexts/AuthContext';
 import { TodoProvider, useTodos } from '../contexts/TodoContext';
 import { getProfile } from '../lib/profile';
 import type { Profile, Todo } from '../types/TodoType';
-import TodoWrite from '../components/todos/TodoWrite';
-import TodoList from '../components/todos/TodoList';
-import Pagination from '../components/Pagination';
-import TodoWriteBox from '../components/todos/TodoWriteBox';
-import { Link } from 'react-router-dom';
 
-// 컴포넌트 생성
+// 용서하세요. 나중에 추출하세요. ^^
 type TodoItemProps = {
   todo: Todo;
   index: number;
 };
 const TodoItemBox = ({ todo, index }: TodoItemProps) => {
-  const { toggleTodo, deleteTodo, editTodo, currentPage, itemsPerPage, totalCount } = useTodos();
+  const { toggleTodo, editTodo, deleteTodo, currentPage, itemsPerPage, totalCount } = useTodos();
 
   // 순서번호 매기기
   const globalIndex = totalCount - ((currentPage - 1) * itemsPerPage + index);
@@ -34,7 +32,7 @@ const TodoItemBox = ({ todo, index }: TodoItemProps) => {
   };
 
   return (
-    <li className={`todo-item ${todo.completed ? 'completed' : ''} `}>
+    <li className={`todo-item ${todo.completed ? 'completed' : ''}`}>
       {/* 출력 번호 */}
       <span className="todo-number">{globalIndex}</span>
       <div className="todo-content">
@@ -51,6 +49,7 @@ const TodoItemBox = ({ todo, index }: TodoItemProps) => {
   );
 };
 
+// 용서하세요. 나중에 추출하세요. ^^
 const TodoListBox = () => {
   const { user } = useAuth();
   // 전체 할일 목록 가져오기
@@ -64,7 +63,6 @@ const TodoListBox = () => {
   );
 };
 
-// 컴포넌트를 여기에다 작성, 필요하면 이동하기
 interface TodosContentProps {
   profile: Profile | null;
   currentPage: number;
@@ -81,7 +79,7 @@ const TodosContent = ({
   return (
     <div>
       <div>
-        {/* 새글 등록시 1페이지로 이동 후 목록 새로고침 */}
+        {/* 새글 등록시 1페이지로 이동후 목록새로고침 */}
         <TodoWriteBox profile={profile} />
       </div>
       <div>
@@ -101,16 +99,19 @@ const TodosContent = ({
 };
 
 function TodoListPage() {
-  // 1. 사용자 정보 가져오기
   const { user } = useAuth();
 
-  // 3. 페이지네이션 관련 가져오기
+  // 페이지네이션 관련
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  // 페이지 변경 핸들러
+  const handleChangePage = (page: number) => {
+    setCurrentPage(page);
+  };
 
-  // 2. 사용자 프로필 가져오기
+  // 프로필 가져오기
   const [profile, setProfile] = useState<Profile | null>(null);
-  const loadProfile = async (): Promise<any> => {
+  const loadProfile = async () => {
     try {
       if (user?.id) {
         const userProfile = await getProfile(user.id);
@@ -120,7 +121,7 @@ function TodoListPage() {
         setProfile(userProfile);
       }
     } catch (error) {
-      console.log('프로필 가져오기 Error: ', error);
+      console.log('프로필 가져오기 Error : ', error);
     }
   };
 
@@ -128,16 +129,11 @@ function TodoListPage() {
     loadProfile();
   }, []);
 
-  // 페이지 변경 핸들러
-  const handleChangePage = (page: number) => {
-    setCurrentPage(page);
-  };
-
   return (
     <div>
       <div className="page-header">
-        <h2 className="page-title">📝 할일 관리</h2>
-        {profile?.nickname && <p className="page-subtitle">{profile?.nickname}님의 Todo관리</p>}
+        <h2 className="page-title">🍈 할 일 관리</h2>
+        {profile?.nickname && <p className="page-subtitle">{profile.nickname}님의 Todo 관리</p>}
       </div>
 
       <TodoProvider currentPage={currentPage} limit={itemsPerPage}>

@@ -5,8 +5,8 @@ import React, {
   useReducer,
   type PropsWithChildren,
 } from 'react';
-import type { Todo } from '../types/TodoType';
 
+import type { Todo } from '../types/TodoType';
 // 전체 DB 가져오기
 import { getTodos, getTodosPaginated } from '../services/todoService';
 
@@ -18,9 +18,8 @@ const initialState: TodosState = {
   totalPages: 0,
   currentPage: 1,
 };
-
 // 2. 리듀서
-// action는 {type:"문자열", payload: 재료} 형태
+// action 은 {type:"문자열", payload: 재료 } 형태
 enum TodoActionType {
   ADD = 'ADD',
   DELETE = 'DELETE',
@@ -50,7 +49,7 @@ function reducer(
       return {
         ...state,
         todos: [todo, ...state.todos],
-        totalCount: state.totalCount + 1, // 새 항목 추가시 전체 개수 증가
+        totalCount: state.totalCount + 1, // 새 항목 추가 시 전체 개수 증가
       };
     }
     case TodoActionType.TOGGLE: {
@@ -60,23 +59,21 @@ function reducer(
       );
       return { ...state, todos: arr };
     }
-
     case TodoActionType.DELETE: {
       const { id } = action.payload;
       const arr = state.todos.filter(item => item.id !== id);
       return {
         ...state,
         todos: arr,
-        totalCount: Math.max(0, state.totalCount - 1), // 항목 삭제 시 전체 개수 감소 (0이하로는 내려가지 않음)
+        totalCount: Math.max(0, state.totalCount - 1), // 항목 삭제 시 전체 개수 감소 (0 이하로는 내려가지 않음)
       };
     }
-
     case TodoActionType.EDIT: {
       const { id, title } = action.payload;
       const arr = state.todos.map(item => (item.id === id ? { ...item, title } : item));
       return { ...state, todos: arr };
     }
-    // Supabase에 목록 읽기
+    // Supabase 에 목록 읽기
     case TodoActionType.SET_TODOS: {
       const { todos, totalCount, totalPages, currentPage } = action.payload;
       return { ...state, todos, totalCount, totalPages, currentPage };
@@ -85,25 +82,25 @@ function reducer(
       return state;
   }
 }
-
 // 3. context 생성
-// 만들어진 Context가 관리하는 value의 모양
+//  만들어진 Context 가 관리하는 Value 의 모양
 type TodoContextValue = {
   todos: Todo[];
-  totalPages: number;
   totalCount: number;
+  totalPages: number;
   currentPage: number;
   itemsPerPage: number;
-  addTodo: (newTodo: Todo) => void;
+  addTodo: (todo: Todo) => void;
   toggleTodo: (id: number) => void;
   deleteTodo: (id: number) => void;
   editTodo: (id: number, editTitle: string) => void;
   loadTodos: (page: number, limit: number) => Promise<void>;
 };
+
 const TodoContext = createContext<TodoContextValue | null>(null);
 
 // 4. provider 생성
-// 방법 1. props 정의하기
+// 1. props 정의하기
 // interface TodoProviderProps {
 //   children?: React.ReactNode;
 //   currentPage?: number;
@@ -119,31 +116,31 @@ export const TodoProvider: React.FC<TodoProviderProps> = ({
   currentPage = 1,
   limit = 10,
 }): JSX.Element => {
-  // useReducer로 상태관리
+  // useReducer 로 상태관리
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  // dispatch를 위한 함수 표현식 모음
+  // dispatch 를 위한 함수 표현식 모음
   const addTodo = (newTodo: Todo) => {
     dispatch({ type: TodoActionType.ADD, payload: { todo: newTodo } });
   };
   const toggleTodo = (id: number) => {
-    dispatch({ type: TodoActionType.TOGGLE, payload: { id: id } });
+    dispatch({ type: TodoActionType.TOGGLE, payload: { id } });
   };
   const deleteTodo = (id: number) => {
-    dispatch({ type: TodoActionType.DELETE, payload: { id: id } });
+    dispatch({ type: TodoActionType.DELETE, payload: { id } });
   };
   const editTodo = (id: number, editTitle: string) => {
-    dispatch({ type: TodoActionType.EDIT, payload: { id: id, title: editTitle } });
+    dispatch({ type: TodoActionType.EDIT, payload: { id, title: editTitle } });
   };
   // 실행시 state { todos } 를 업데이트함.
-  // reduce 함수를 실행함.
+  // reducer 함수를 실행함.
   const setTodos = (todos: Todo[], totalCount: number, totalPages: number, currentPage: number) => {
     dispatch({
       type: TodoActionType.SET_TODOS,
       payload: { todos, totalCount, totalPages, currentPage },
     });
   };
-  // Supabase의 목록 읽기 함수 표현식
+  // Supabase 의 목록 읽기 함수 표현식
   // 비동기 데이터베이스 접근
   // const loadTodos = async (): Promise<void> => {
   //   try {
@@ -181,8 +178,8 @@ export const TodoProvider: React.FC<TodoProviderProps> = ({
   // value 전달할 값
   const value: TodoContextValue = {
     todos: state.todos,
-    totalPages: state.totalPages,
     totalCount: state.totalCount,
+    totalPages: state.totalPages,
     currentPage: state.currentPage,
     itemsPerPage: limit,
     addTodo,
@@ -198,7 +195,7 @@ export const TodoProvider: React.FC<TodoProviderProps> = ({
 export function useTodos(): TodoContextValue {
   const ctx = useContext(TodoContext);
   if (!ctx) {
-    throw new Error('컨텍스트가 없어용');
+    throw new Error('컨텍스트가 없어요.');
   }
   return ctx;
 }

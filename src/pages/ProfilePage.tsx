@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getProfile, removeAvatar, updateProfile, uploadAvatar } from '../lib/profile';
 import type { Profile, ProfileUpdate } from '../types/TodoType';
@@ -11,7 +11,7 @@ import Loading from '../components/Loading';
  * - 회원탈퇴 기능 : 확인을 거치고 진행하도록
  */
 function ProfilePage() {
-  // 회원 기본 정보 (카카오, 구글 회원 탈퇴 추가 )
+  // 회원 기본 정보 (카카오, 구글 회원 탈퇴 추가)
   const { user, deleteAccount, unlinkKakaoAccount, unlinkGoogleAccount, changePassword } =
     useAuth();
   // 데이터 가져오는 동안의 로딩
@@ -33,10 +33,10 @@ function ProfilePage() {
   // 실제 파일 (바이너리)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   // 사용자가 새로운 이미지 선택시 즉, 편집 중인 경우 원본 URL 보관용 문자열
-  const [originalAvatarUrl, setOriginalAvatarUrl] = useState<string | null>(null);
+  const [originalAvatarUrl, setOriginalAvartarUrl] = useState<string | null>(null);
   // 이미지 제거 요청 상태(그러나, 실제 file 제거는 수정확인 버튼 눌렀을 때 처리)
-  const [imageRemovalRequest, setImageRemovalRequest] = useState<boolean>(false);
-  // input type = "file" 태그 참조
+  const [imageRemovalRequest, setImageRemovalReauest] = useState<boolean>(false);
+  // input type="file" 태그 참조
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 비밀번호 변경 관련 상태
@@ -47,16 +47,17 @@ function ProfilePage() {
   // 사용자 프로필 정보 가져오기
   const loadProfile = async () => {
     if (!user?.id) {
-      // 사용자의 id가 없으면 중지
+      // 사용자의 id 가 없으면 중지
       setError('사용자 정보를 찾을 수 없습니다.');
       setLoading(false);
       return;
     }
     try {
-      // 사용자 정보 가져오기 (null 일수도 있다.)
+      // 사용자 정보 가져오기 ( null 일수도 있다. )
       const tempData = await getProfile(user?.id);
+
       if (!tempData) {
-        // null 일때
+        // null 이라면
         setError('사용자 프로필 정보를 찾을 수 없습니다.');
         return;
       }
@@ -86,18 +87,18 @@ function ProfilePage() {
       let imgUrl = originalAvatarUrl; // 원본 이미지 URL
       // 아바타이미지 제거라면
       if (imageRemovalRequest) {
-        // storage에 실제 이미지를 제거함.
+        // storage 에 실제 이미지를 제거함.
         const success = await removeAvatar(user.id);
         if (success) {
           imgUrl = null;
         } else {
-          alert('이미지 제거에 실패했습니다. 기존 이미지가 유지됩니다.');
+          alert('이미지 제거에 실패했습니다. 기존 이미지가 유지 됩니다.');
         }
       } else if (selectedFile) {
         // 새로운 이미지가 업로드 된다면
         const uploadedImageUrl = await uploadAvatar(selectedFile, user.id);
         if (uploadedImageUrl) {
-          // 실제로 업로드 완료 후 전달받은 URL 문자열을 보관함
+          // 실제로 업로드 완료 후 전달받은 URL 문자열을 보관함.
           // profiles 테이블에 avatar_url 에 넣어줄 문자열
           imgUrl = uploadedImageUrl;
         } else {
@@ -105,22 +106,22 @@ function ProfilePage() {
         }
       }
 
+      // 실제로 업데이트 진행 부분
       const tempUpdateData: ProfileUpdate = { nickname: nickName, avatar_url: imgUrl };
 
       const success = await updateProfile(tempUpdateData, user.id);
       if (!success) {
-        console.log('프로필 업데이트에 실패하였습니다');
+        console.log('프로필 업데이트에 실패하였습니다.');
         return;
       }
       // 업데이트 성공시 초기화 진행
       setPreviewImage(null);
       setSelectedFile(null);
-      setImageRemovalRequest(false);
-      setOriginalAvatarUrl(null);
+      setImageRemovalReauest(false);
+      setOriginalAvartarUrl(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-
       await loadProfile();
       alert('프로필이 성공적으로 업데이트 되었습니다.');
     } catch (err) {
@@ -135,6 +136,7 @@ function ProfilePage() {
     const message =
       '카카오 계정 연동을 해제하시겠습니까? \n\n 연동 해제 후에는 카카오로 다시 로그인 할 수 없습니다.';
     const isConfirm = confirm(message);
+
     if (isConfirm) {
       const result = await unlinkKakaoAccount();
       if (result.success) {
@@ -152,6 +154,7 @@ function ProfilePage() {
     const message =
       '구글 계정 연동을 해제하시겠습니까? \n\n 연동 해제 후에는 구글로 다시 로그인 할 수 없습니다.';
     const isConfirm = confirm(message);
+
     if (isConfirm) {
       const result = await unlinkGoogleAccount();
       if (result.success) {
@@ -190,15 +193,15 @@ function ProfilePage() {
         setTimeout(() => {
           setPasswordMessage('');
         }, 3000);
-      } else {
-        setPasswordMessage(`비밀번호 변경 실패 : ${result.error}`);
+      } else if (result.error) {
+        setPasswordMessage(`비밀번호 변경 실패: ${result.error}`);
       }
     } catch (err) {
       setPasswordMessage('비밀번호 변경 중 오류가 발생했습니다.');
     }
   };
 
-  // 회원 탈퇴
+  // 회원탈퇴
   const handleDeleteUser = () => {
     // 카카오 또는 구글 로그인 사용자인지 확인
     const isKakaoUser = user?.app_metadata.provider === 'kakao';
@@ -218,13 +221,12 @@ function ProfilePage() {
     }
   };
 
-  // 이미지 선택 처리(미리보기)
+  // 이미지 파일 선택 처리(미리보기)
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) {
       return;
     }
-
     // 파일 형식 검증
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
     if (!allowedTypes.includes(file.type)) {
@@ -239,7 +241,7 @@ function ProfilePage() {
       return;
     }
 
-    // 미리보기 생성 (파일을 글자로 변환한 것...)
+    // 미리보기 생성 (파일을 글자로 변환한 것..)
     const reader = new FileReader();
     reader.onload = e => {
       setPreviewImage(e.target?.result as string);
@@ -248,9 +250,8 @@ function ProfilePage() {
 
     setSelectedFile(file);
     // 새 이미지 선택 시 이미지 제거 요청 상태 초기화
-    setImageRemovalRequest(false);
+    setImageRemovalReauest(false);
   };
-
   // 이미지 파일 선택 취소
   const handleCancelUpload = () => {
     setPreviewImage(null);
@@ -267,8 +268,8 @@ function ProfilePage() {
       return;
     }
     // 즉시 제거하지 않습니다.
-    // 제거하라는 상태만 별도로 관리
-    setImageRemovalRequest(true);
+    // 제거하라는 상태만 별도로 관리함.
+    setImageRemovalReauest(true);
     setPreviewImage(null);
     setSelectedFile(null);
     if (fileInputRef.current) {
@@ -281,15 +282,14 @@ function ProfilePage() {
   }, []);
 
   if (loading) {
-    return <Loading message="프로필 정보를 불러오는 중..." size="lg" />;
+    return <Loading message="프로필 정보를 불러오는 중 ..." size="lg" />;
   }
-
-  // error 메세지 출력하기
+  // error 메시지 출력하기
   if (error) {
     return (
       <div className="card" style={{ textAlign: 'center' }}>
-        <h2 className="page-title">⚠ 프로필 오류</h2>
-        <div style={{ color: 'var(--gray-600)', marginBottom: 'var(--space-4)' }}>🚫{error}</div>
+        <h2 className="page-title">⚠️ 프로필 오류</h2>
+        <div style={{ color: 'var(--gray-600)', marginBottom: 'var(--space-4)' }}>{error}</div>
         <button onClick={loadProfile} className="btn btn-primary">
           재시도
         </button>
@@ -300,20 +300,19 @@ function ProfilePage() {
   return (
     <div>
       <div className="page-header">
-        <h2 className="page-title">👩‍💼 회원정보</h2>
+        <h2 className="page-title">👤 회원정보</h2>
         <p className="page-subtitle">개인 정보를 확인하고 수정하세요.</p>
       </div>
       {/* 사용자 기본 정보 섹션 */}
       <div className="card">
-        <h3 style={{ marginBottom: 'var(--space-4)', color: 'var(--gray-800)' }}>기본 정보</h3>
-
+        <h3 style={{ marginBottom: 'var(--space-4)', color: 'var(--gray--800)' }}>📧 기본 정보</h3>
         {/* 로그인 방식 표시 */}
         <div className="form-group">
           <label className="form-label">로그인 방식</label>
           <div
             style={{
               padding: 'var(--space-3)',
-              backgroundColor: '#fff',
+              backgroundColor: '#ffffff',
               borderRadius: 'var(--radius-md)',
               color: 'var(--gray-700)',
               display: 'flex',
@@ -382,7 +381,7 @@ function ProfilePage() {
           </div>
         </div>
         <div className="form-group">
-          <label>가입일</label>
+          <label className="form-label">가입일</label>
           <div
             style={{
               padding: 'var(--space-3)',
@@ -397,8 +396,8 @@ function ProfilePage() {
       </div>
       {/* 사용자 추가정보 */}
       <div className="card">
-        <h3 style={{ marginBottom: 'var(--space-4)', color: 'var(--gray-800)' }}>
-          👩‍💼 사용자 추가 정보
+        <h3 style={{ marginBottom: 'var(--space-4)', color: 'var(--gray--800)' }}>
+          👤 사용자 추가 정보
         </h3>
         <div className="form-group">
           <label className="form-label">아이디</label>
@@ -413,7 +412,6 @@ function ProfilePage() {
             {profileData?.id}
           </div>
         </div>
-
         {edit ? (
           <>
             <div className="form-group">
@@ -448,8 +446,8 @@ function ProfilePage() {
                     style={{ flex: 1 }}
                   />
                   <button
-                    onClick={handlePasswordChange}
                     className="btn btn-primary"
+                    onClick={handlePasswordChange}
                     style={{ whiteSpace: 'nowrap' }}
                   >
                     변경
@@ -475,7 +473,6 @@ function ProfilePage() {
                 )}
               </div>
             )}
-
             <div className="form-group">
               <label className="form-label">아바타 편집</label>
               <div style={{ marginBottom: 'var(--space-4)' }}>
@@ -488,7 +485,7 @@ function ProfilePage() {
                         height: '120px',
                         objectFit: 'cover',
                         borderRadius: '50%',
-                        border: '3px solid var(--paimary-500)',
+                        border: '3px solid var(--primary-500)',
                         boxShadow: 'var(--shadow-md)',
                       }}
                     />
@@ -631,7 +628,7 @@ function ProfilePage() {
 
                     {previewImage && (
                       <button
-                        className={`btn ${uploading ? 'btn-secondary' : 'btn-primary'}`}
+                        className={`btn btn-secondary`}
                         disabled={uploading}
                         onClick={handleCancelUpload}
                       >
@@ -642,10 +639,13 @@ function ProfilePage() {
                     {!previewImage && !imageRemovalRequest && originalAvatarUrl && (
                       <button
                         className="btn"
-                        style={{ backgroundColor: uploading ? 'var(--gray-300)' : '#dc3545' }}
+                        style={{
+                          backgroundColor: uploading ? 'var(--gray-300)' : '#dc3545',
+                          color: 'white',
+                        }}
                         onClick={handleRemoveImage}
                       >
-                        {uploading ? '처리중...' : '이미지 제거'}
+                        {uploading ? '처리 중...' : '이미지 제거'}
                       </button>
                     )}
 
@@ -654,7 +654,7 @@ function ProfilePage() {
                         disabled={uploading}
                         className={`btn ${uploading ? 'btn-secondary' : 'btn-success'}`}
                         onClick={() => {
-                          setImageRemovalRequest(false);
+                          setImageRemovalReauest(false);
                         }}
                       >
                         제거 취소
@@ -761,7 +761,7 @@ function ProfilePage() {
               disabled={uploading}
               onClick={saveProfile}
             >
-              {uploading ? '저장 중...' : '수정 확인'}
+              {uploading ? '저장 중...' : '수정확인'}
             </button>
             <button
               className="btn btn-secondary btn-lg"
@@ -770,8 +770,8 @@ function ProfilePage() {
                 setNickName(profileData?.nickname || '');
                 setPreviewImage(null);
                 setSelectedFile(null);
-                setImageRemovalRequest(false);
-                setOriginalAvatarUrl(null);
+                setImageRemovalReauest(false);
+                setOriginalAvartarUrl(null);
                 if (fileInputRef.current) {
                   fileInputRef.current.value = '';
                 }
@@ -787,8 +787,8 @@ function ProfilePage() {
               onClick={() => {
                 setEdit(true);
                 // 편집 시작 시 원본 이미지 URL 저장
-                setOriginalAvatarUrl(profileData?.avatar_url || null);
-                setImageRemovalRequest(false);
+                setOriginalAvartarUrl(profileData?.avatar_url || null);
+                setImageRemovalReauest(false);
               }}
             >
               정보수정
@@ -809,7 +809,7 @@ function ProfilePage() {
               <button
                 className="btn btn-warning btn-lg"
                 onClick={handleUnlinkGoogle}
-                style={{ backgroundColor: '#e5e5e5', color: '#000000', border: 'none' }}
+                style={{ backgroundColor: '#4285F4', color: '#FFFFFF', border: 'none' }}
               >
                 🔗 구글 연동 해제
               </button>

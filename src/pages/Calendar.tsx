@@ -15,16 +15,16 @@ function Calendar() {
   const [events, setEvents] = useState<EventInput[]>([
     {
       id: '1',
-      title: '우리반 운동회',
+      title: '우리반 운동회1',
       start: '2025-09-03',
       allDay: true,
       color: '#ff7f50', // 배경 및 글자 기본 색상
-      textColor: '#fff', // 글자 색상
+      textColor: '#f00', // 글자 색상
       borderColor: '#cc3300', // 테두리 색상
     },
     {
       id: '2',
-      title: '우리반 운동회',
+      title: '우리반 운동회2',
       start: '2025-09-03',
       allDay: true,
       classNames: ['sports-event'],
@@ -34,16 +34,15 @@ function Calendar() {
       title: '과학 실험',
       start: '2025-09-05T10:00:00',
       end: '2025-09-05T11:00:00',
-      classNames: ['science-event'],
+      className: ['science-event'],
     },
   ]);
   // 일정 상세 보기
   const handleClick = (info: EventClickArg) => {
     // console.log(info.event.title);
     // alert(`제목 : ${info.event.title} 입니다.`);
-    // 삭제한다면? (useState 업데이트 하면 됨)
-    // const arr = events.filter(item => item.title !== info.event.title);
-    const arr = events.filter(item => item.id !== info.event.id);
+    // 삭제한다면? (useState 업데이트하면 됨)
+    const arr = events.filter(item => item.title !== info.event.title);
     setEvents(arr);
   };
   // 빈 날짜 선택 처리
@@ -100,15 +99,15 @@ function Calendar() {
           select={e => handleSelect(e)}
           editable={true} // 드래그로 수정
           height={'auto'}
-          eventColor="#90ee90" // 기본 이벤트 배경색
+          eventColor="#90ee90" // 기본 이벤트 배경색상
           eventTextColor="#000" // 기본 글자색상
-          eventBorderColor="#008000" // 기본 테두리 색상
+          eventBorderColor="#008000" // 기본 테두리색상
           // JSX 출력하기
           eventContent={e => {
             return (
               <>
-                <div style={{ backgroundColor: 'yellowgreen', padding: '1px' }}>
-                  <b>😁{e.event.title}</b>
+                <div style={{ backgroundColor: 'yellowgreen', padding: '20px' }}>
+                  <b>😍 {e.event.title}</b>
                 </div>
               </>
             );

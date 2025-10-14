@@ -34,7 +34,7 @@ const InfiniteTodoWrite = () => {
 
 // 용서하세요. 목록 컴포넌트
 const InfiniteTodoList = () => {
-  const { loading, loadingMore, hasMore, loadMoreTodos, todos, totalCount } = useInfiniteScroll();
+  const { loading, hasMore, loadMoreTodos, todos, totalCount } = useInfiniteScroll();
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
 
@@ -146,7 +146,6 @@ const InfiniteTodoList = () => {
                   >
                     {/* 번호표시 */}
                     <span className="todo-number">{getGlobalIndex(index)}.</span>
-
                     <div className="todo-content">
                       <span className={`todo-title ${item.completed ? 'completed' : ''}`}>
                         <Link to={`/todos/edit/${item.id}`}>{item.title}</Link>

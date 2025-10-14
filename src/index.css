@@ -7,7 +7,7 @@
 }
 
 html {
-  /* 가로 스크롤은 일반적으로 x만 가림 */
+  /* 가로 스크롤은 일반적으로 x 만 가림 */
   overflow-x: hidden;
   font-size: 16px;
 }
@@ -27,7 +27,7 @@ body {
 a {
   text-decoration: none;
   color: #3b82f6;
-  /* 중간단계에서 color는 0.2초동안 부드럽게 변함 */
+  /* 중간단계에서 color은 0.2초 동안 부드럽게 변함 */
   transition: color 0.2s ease;
 }
 
@@ -37,14 +37,14 @@ a:hover {
 
 a:focus {
   color: #1e40af;
-  /* var는 css에서 변수를 사용하는 경우 */
+  /* var 는 css 에서 변수 사용하는 경우 */
   outline: 2px solid var(--primary-500);
   outline-offset: 2px;
 }
 
 /* 버튼 클래스를 가진 링크는 색상 변경하지 않음 */
 a.btn {
-  /* inherit은 상속으로서 색상을 지정된 것을 사용한다 */
+  /* inherit 은 상속으로서 색상을 지정된 것을 사용 */
   color: inherit;
 }
 
@@ -57,8 +57,8 @@ a.btn:focus {
 }
 
 /* ===== List Styles ===== */
-/* 통상 ul은 모양없이 진행함. */
-/* ol은 order List로서 순서가 있는 목록 */
+/* 통상 ul 은 모양없이 진행함. */
+/* ol 은 order List 로서 순서가 있는 목록 */
 ul,
 li {
   list-style: none;
@@ -75,6 +75,7 @@ button {
   transition: all 0.2s ease;
 }
 
+/* 버튼이 비활성화시 처리 */
 button:disabled {
   opacity: 0.6;
   /* 버튼의 마우스 커서 오버시 보이는 모양 */
@@ -88,7 +89,7 @@ textarea {
   border: 1px solid #d1d5db;
   border-radius: 8px;
   padding: 8px 12px;
-  /* 중간모션 설정에서 조금씩 적용이 다를 때 */
+  /* 중간모션 설정에서 여러개를 조금씩 적용이 다를때 */
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease;
@@ -97,13 +98,13 @@ textarea {
 input:focus,
 textarea:focus {
   outline: none;
-  /* css 변수 사용하기 : var (변수명) */
-  border-color: orange;
+  /* css 변수사용하기 : var (변수명) */
+  border-color: var(--primary-500);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 /* ===== Design System Variables ===== */
-/* css에서 변수 만들 때 */
+/* css 에서 변수 만들 때 */
 :root {
   /* Colors */
   --primary-50: #eff6ff;
@@ -131,11 +132,11 @@ textarea:focus {
   --gray-900: #111827;
 
   /* Spacing */
-  /* rem은 html의 폰트사이즈를 기준으로 배수로 계산 */
+  /* rem 은 html의  폰트사이즈를 기준으로 배수로 계산 */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
-  /* 1rem이 현재는 16px */
+  /* 1rem 이 현재는 16px  */
   --space-4: 1rem;
   --space-6: 1.5rem;
   --space-8: 2rem;
@@ -401,6 +402,28 @@ textarea:focus {
   outline-offset: 2px;
 }
 
+/* 알림 배지 스타일 */
+.notification-badge {
+  position: relative;
+  display: inline-block;
+  margin-left: 6px;
+  color: #ff4444;
+  font-size: 12px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
 /* ===== Loading States ===== */
 .loading-container {
   display: flex;
@@ -421,6 +444,7 @@ textarea:focus {
   display: flex;
   align-items: center;
   justify-content: center;
+  /* 흐림효과 */
   backdrop-filter: blur(2px);
 }
 
@@ -461,6 +485,7 @@ textarea:focus {
   border: 1px solid var(--primary-300);
   border-top: 1px solid var(--primary-600);
   border-radius: 50%;
+  /* animation : 모션이름 모션시간 시간왜곡 무한루프 모션반대로진행*/
   animation: spin 0.5s linear infinite reverse;
 }
 
@@ -841,14 +866,13 @@ textarea:focus {
   outline: none !important;
 }
 
-/* ============ PagiNation Styles ======= */
+/* ===== PageNation Styles ===== */
 .pagination-container {
   display: 'flex';
   align-items: 'center';
   gap: var(--space-4);
   padding: var(--space-4);
 }
-
 .pagination-info {
   text-align: center;
   color: var(--gray-600);
@@ -862,12 +886,10 @@ textarea:focus {
   font-weight: 600;
   color: var(--gray-800);
 }
-
 .pagination-controls {
   display: flex;
+  align-self: center;
   justify-content: center;
-  align-items: center;
-  margin-top: 20px;
   gap: var(--space-2);
 }
 .pagination-btn {
@@ -875,12 +897,14 @@ textarea:focus {
   align-items: center;
   justify-content: center;
   min-width: 40px;
-  height: 40;
-  padding: var(--space-3);
+  height: 40px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--gray-300);
   background-color: #fff;
   color: var(--gray-700);
   font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
 }
 .pagination-btn:hover {
   background-color: var(--primary-50);
@@ -888,17 +912,15 @@ textarea:focus {
   color: var(--primary-700);
   box-shadow: var(--shadow-sm);
 }
-
 .pagination-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   background-color: var(--gray-100);
   color: var(--gray-400);
 }
-
 .pagination-numbers {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 .pagination-ellipsis {
   display: inline-flex;
@@ -910,8 +932,7 @@ textarea:focus {
   font-weight: 600;
   font-size: 16px;
 }
-
-/* 현재 페이지일때 버튼 */
+/* 현재 페이지일 때 버튼 */
 .pagination-btn-number.active {
   background-color: var(--primary-500);
   border-color: var(--primary-500);
@@ -919,12 +940,10 @@ textarea:focus {
   font-weight: 600;
   box-shadow: var(--shadow-sm);
 }
-
 .pagination-btn-number.active:hover {
   background-color: var(--primary-600);
   border-color: var(--primary-600);
 }
-
 /* 반응형 */
 @media screen and (max-width: 768px) {
   .pagination-controls {
